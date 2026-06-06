@@ -35,7 +35,8 @@ export const updateVendor = async (req: Request, res: Response): Promise<void> =
     req.body as UpdateVendorInput,
     req.user!.userId,
     req.user!.role,
-    req.user!.vendorId
+    req.user!.vendorId,
+    ip(req)
   );
   res.json(successResponse(vendor, 'Vendor updated'));
 };

@@ -112,7 +112,7 @@ export const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintTempl
         <div className="flex justify-between items-start pb-6 border-b-2 border-slate-800">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <div className="h-8 w-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-lg">
+              <div className="h-8 w-8 rounded flex items-center justify-center text-white font-bold text-lg" style={{ background: '#4f46e5' }}>
                 VB
               </div>
               <span className="text-xl font-bold text-slate-800 tracking-tight">

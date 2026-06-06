@@ -100,7 +100,7 @@ export default function QuotationComparisonPage() {
   };
 
   // ─── OFFICER / MANAGER COMPARISON LOGIC ────────────────────────────────────
-  const acceptedQte = quotations.find((q) => q.status === QuotationStatus.ACCEPTED);
+  const acceptedQte = quotations.find((q) => q.status === QuotationStatus.SELECTED);
 
   // Sorting
   const sortedQuotations = [...quotations].sort((a, b) => {
@@ -147,9 +147,9 @@ export default function QuotationComparisonPage() {
 
   if (!rfq) {
     return (
-      <div className="text-center p-8 bg-surface border border-default rounded-lg">
-        <p className="text-muted">RFQ not found.</p>
-        <button onClick={() => navigate('/rfqs')} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded font-semibold text-sm">
+      <div className="empty">
+        <p className="empty__title">RFQ not found</p>
+        <button onClick={() => navigate('/rfqs')} className="btn btn--primary mt-4">
           Back to RFQs
         </button>
       </div>
@@ -170,7 +170,7 @@ export default function QuotationComparisonPage() {
           action={
             <button
               onClick={() => navigate(`/rfqs/${id}`)}
-              className="px-4 py-2 border border-default rounded-md text-sm font-semibold text-primary hover:bg-primary-light flex items-center gap-2"
+              className="btn btn--secondary flex items-center gap-2"
             >
               <ArrowLeft size={16} />
               Cancel
@@ -179,7 +179,8 @@ export default function QuotationComparisonPage() {
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-surface border border-default rounded-lg p-6 shadow-sm space-y-6">
+          <div className="card lg:col-span-2">
+            <div className="card__body space-y-6">
             <div>
               <h3 className="text-sm font-bold text-muted uppercase tracking-wider pb-2 border-b border-default mb-4">
                 Line Items Pricing
@@ -208,7 +209,7 @@ export default function QuotationComparisonPage() {
                           type="number"
                           step="0.01"
                           {...register(`items.${idx}.unitPrice`, { valueAsNumber: true })}
-                          className="w-full px-2 py-1.5 text-xs rounded bg-surface border border-default text-primary focus:outline-none focus:border-primary"
+                          className="input"
                         />
                       </div>
                       <div className="md:col-span-2">
@@ -216,7 +217,7 @@ export default function QuotationComparisonPage() {
                         <input
                           type="number"
                           {...register(`items.${idx}.taxRate`, { valueAsNumber: true })}
-                          className="w-full px-2 py-1.5 text-xs rounded bg-surface border border-default text-primary focus:outline-none focus:border-primary"
+                          className="input"
                         />
                       </div>
                       <div className="md:col-span-2 text-right">
@@ -233,7 +234,7 @@ export default function QuotationComparisonPage() {
                     <input
                       type="number"
                       {...register('deliveryDays', { valueAsNumber: true })}
-                      className="w-full px-3 py-2 text-sm rounded bg-surface border border-default text-primary focus:outline-none"
+                      className="input"
                     />
                     {errors.deliveryDays && (
                       <p className="text-[10px] text-red-500 font-semibold mt-1">{errors.deliveryDays.message}</p>
@@ -254,7 +255,7 @@ export default function QuotationComparisonPage() {
                   <button
                     type="submit"
                     disabled={submitQteMutation.isPending}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-semibold text-sm cursor-pointer flex items-center gap-2"
+                    className="btn btn--primary flex items-center gap-2"
                   >
                     <Send size={16} />
                     Submit Quotation
@@ -262,10 +263,11 @@ export default function QuotationComparisonPage() {
                 </div>
               </form>
             </div>
+            </div>
           </div>
 
-          {/* Running totals panel */}
-          <div className="bg-surface border border-default rounded-lg p-6 shadow-sm h-fit space-y-4">
+          <div className="card h-fit">
+            <div className="card__body space-y-4">
             <h3 className="text-sm font-bold text-muted uppercase tracking-wider pb-2 border-b border-default">
               Quotation Summary
             </h3>
@@ -276,6 +278,7 @@ export default function QuotationComparisonPage() {
             <p className="text-[10px] text-muted italic leading-normal">
               Note: This quotation remains binding until validity terms expire. Changes cannot be made after submission.
             </p>
+            </div>
           </div>
         </div>
       </div>
@@ -308,25 +311,25 @@ export default function QuotationComparisonPage() {
       />
 
       {acceptedQte && (
-        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg flex items-center justify-between gap-4 mb-6 dark:bg-blue-950/20 dark:border-blue-900/50">
+        <div className="card mb-6 border-default bg-primary-light">
+          <div className="card__body flex items-center justify-between gap-4">
           <div>
-            <h4 className="text-sm font-bold text-primary">
-              🎉 Quotation Selected
-            </h4>
+            <h4 className="text-sm font-bold text-primary">Quotation selected</h4>
             <p className="text-xs text-muted mt-0.5">
-              Quotation by <strong>{acceptedQte.vendorName}</strong> has been selected and approved. Purchase Order has been generated.
+              Quotation by <strong>{acceptedQte.vendorName}</strong> has been selected. A purchase order has been generated.
             </p>
           </div>
           <StatusBadge status="SELECTED" />
+          </div>
         </div>
       )}
 
       {quotations.length === 0 ? (
-        <div className="text-center p-8 bg-surface border border-default rounded-lg">
-          <p className="text-muted">No bids submitted yet for this RFQ.</p>
+        <div className="empty">
+          <p className="empty__description">No bids submitted yet for this RFQ.</p>
         </div>
       ) : (
-        <div className="w-full bg-surface border border-default rounded-lg shadow-sm overflow-hidden">
+        <div className="data-table">
           {/* COMPARISON TABLE */}
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[700px]">
@@ -372,7 +375,7 @@ export default function QuotationComparisonPage() {
                           <td
                             key={q.id}
                             className={`px-6 py-4 text-center border-r border-default last:border-r-0 ${
-                              isLowest ? 'bg-blue-100/60 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300' : 'text-primary'
+                              isLowest ? 'bg-primary-light text-brand' : 'text-primary'
                             }`}
                           >
                             <div className="font-semibold">{formatCurrency(qItem.unitPrice)} / unit</div>
@@ -380,7 +383,7 @@ export default function QuotationComparisonPage() {
                               Total: {formatCurrency(qItem.unitPrice * item.quantity)} (GST {qItem.taxRate}%)
                             </div>
                             {isLowest && (
-                              <span className="inline-flex items-center gap-0.5 mt-1.5 px-1.5 py-0.5 rounded bg-blue-600 text-white dark:bg-blue-900 text-[9px] font-bold uppercase tracking-wider">
+                              <span className="badge badge--info mt-1.5">
                                 <TrendingDown size={10} /> Lowest
                               </span>
                             )}
@@ -412,7 +415,7 @@ export default function QuotationComparisonPage() {
                     return (
                       <td key={q.id} className="px-6 py-4 text-center border-r border-default last:border-r-0">
                         <div className="flex items-center justify-center gap-0.5 text-primary font-bold">
-                          <Star size={14} className="fill-current text-blue-500" />
+                          <Star size={14} className="fill-current text-brand" />
                           {rating} / 5.0
                         </div>
                       </td>
@@ -439,7 +442,7 @@ export default function QuotationComparisonPage() {
                       <td key={q.id} className="px-6 py-4 text-center border-r border-default last:border-r-0">
                         <button
                           onClick={() => handleSelectWinnerClick(q)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold uppercase tracking-wider text-[10px] cursor-pointer"
+                          className="btn btn--primary btn--sm uppercase tracking-wider"
                         >
                           Select Vendor
                         </button>
@@ -453,56 +456,45 @@ export default function QuotationComparisonPage() {
         </div>
       )}
 
-      {/* Winner Confirmation Drawer Modal */}
       {isApproveModalOpen && selectedQte && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-surface border border-default rounded-lg shadow-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-default bg-elevated flex justify-between items-center">
-              <h3 className="text-base font-bold text-primary flex items-center gap-1.5">
-                <Landmark size={18} className="text-primary" />
-                Approve & Issue PO
+        <div className="modal-backdrop" onClick={() => setIsApproveModalOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal__header">
+              <h3 className="card__title flex items-center gap-2">
+                <Landmark size={18} />
+                Approve & issue PO
               </h3>
             </div>
-            <div className="p-6 space-y-4">
-              <p className="text-xs text-muted leading-relaxed">
+            <div className="modal__body space-y-4">
+              <p className="text-sm text-muted">
                 You are selecting <strong>{selectedQte.vendorName}</strong> as the winner for{' '}
                 <strong>{rfq.title}</strong>. This will issue a purchase order worth{' '}
                 <strong>{formatCurrency(selectedQte.totalAmount)}</strong>.
               </p>
-
               <div>
-                <label className="block text-xs font-semibold text-primary mb-1">
-                  Manager Approvals Remarks * (Min 10 chars)
-                </label>
+                <label className="input-label">Manager approval remarks (min 10 chars)</label>
                 <textarea
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
                   rows={3}
                   placeholder="Provide technical evaluation justification..."
-                  className="w-full px-3 py-2 text-xs rounded bg-surface border border-default text-primary focus:outline-none resize-none"
+                  className="input resize-none"
                 />
-                <p className="text-[10px] text-muted mt-1">
-                  Characters typed: {remarks.length} (Need at least 10)
-                </p>
+                <p className="input-help">{remarks.length} / 10 characters minimum</p>
               </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-default">
-                <button
-                  type="button"
-                  onClick={() => setIsApproveModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold rounded border border-default text-primary hover:bg-primary-light cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmWinner}
-                  disabled={remarks.length < 10 || approveQteMutation.isPending}
-                  className="px-4 py-2 text-xs font-semibold rounded bg-blue-600 hover:bg-blue-700 text-white cursor-pointer disabled:opacity-50"
-                >
-                  Confirm & Approve
-                </button>
-              </div>
+            </div>
+            <div className="modal__footer">
+              <button type="button" onClick={() => setIsApproveModalOpen(false)} className="btn btn--secondary btn--sm">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmWinner}
+                disabled={remarks.length < 10 || approveQteMutation.isPending}
+                className="btn btn--primary btn--sm"
+              >
+                Confirm & approve
+              </button>
             </div>
           </div>
         </div>

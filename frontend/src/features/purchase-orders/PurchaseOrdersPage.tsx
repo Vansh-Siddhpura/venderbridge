@@ -16,29 +16,32 @@ export default function PurchaseOrdersPage() {
 
   const columns: ColumnDef[] = [
     {
-      header: 'PO Number',
+      header: 'PO',
       cell: (row) => (
-        <span className="font-bold text-slate-900 dark:text-slate-100">
-          {row.poNumber}
-        </span>
+        <div>
+          <div className="font-medium text-primary">{row.poNumber}</div>
+          <div className="text-xs text-muted">{row.vendorName ?? '—'}</div>
+        </div>
       ),
     },
-    { header: 'Vendor Name', accessorKey: 'vendorName' },
     {
-      header: 'Total Value',
-      cell: (row) => <span className="font-semibold">{formatCurrency(row.totalAmount)}</span>,
+      header: 'Total',
+      align: 'right',
+      cell: (row) => <span className="font-medium tabular-nums">{formatCurrency(row.totalAmount)}</span>,
+    },
+    { header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
+    {
+      header: 'Expected delivery',
+      cell: (row) =>
+        row.expectedDelivery ? (
+          <span className="text-secondary">{formatDate(row.expectedDelivery)}</span>
+        ) : (
+          <span className="text-muted">—</span>
+        ),
     },
     {
-      header: 'Status',
-      cell: (row) => <StatusBadge status={row.status} />,
-    },
-    {
-      header: 'Expected Delivery',
-      cell: (row) => <span>{formatDate(row.expectedDelivery)}</span>,
-    },
-    {
-      header: 'Issued At',
-      cell: (row) => <span>{row.issuedAt ? formatDate(row.issuedAt) : '-'}</span>,
+      header: 'Created',
+      cell: (row) => <span className="text-secondary">{formatDate(row.createdAt)}</span>,
     },
   ];
 
@@ -50,29 +53,27 @@ export default function PurchaseOrdersPage() {
     },
   ];
 
-  const handleRowClick = (row: any) => {
-    navigate(`/purchase-orders/${row.id}`);
-  };
-
   return (
     <div>
       <PageHeader
-        title="Purchase Orders Ledger"
-        breadcrumbs={[{ label: 'Procurement', href: '#' }, { label: 'Purchase Orders' }]}
+        title="Purchase orders"
+        subtitle="Track delivery and fulfillment of every issued PO."
+        breadcrumbs={[{ label: 'Procurement' }, { label: 'Purchase orders' }]}
       />
 
       <SearchFilter
-        onSearch={() => {}} // Simple search placeholder
+        onSearch={() => {}}
         onFilter={(_, val) => setStatusFilter(val)}
         filters={filterConfigs}
-        placeholder="Search purchase orders..."
+        placeholder="Search purchase orders"
       />
 
       <DataTable
         columns={columns}
         data={pos}
         isLoading={isLoading}
-        onRowClick={handleRowClick}
+        onRowClick={(row) => navigate(`/purchase-orders/${row.id}`)}
+        emptyMessage="No purchase orders yet."
       />
     </div>
   );

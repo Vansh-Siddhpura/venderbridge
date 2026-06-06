@@ -20,6 +20,7 @@ import poRoutes from './modules/purchase-orders/routes';
 import invoiceRoutes from './modules/invoices/routes';
 import activityLogRoutes from './modules/activity-logs/routes';
 import reportRoutes from './modules/reports/routes';
+import dashboardRoutes from './modules/dashboard/routes';
 
 const app: Express = express();
 
@@ -34,30 +35,44 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-// ── Logging ───────────────────────────────────────────────────────────────────
-app.use(
-  morgan('combined', {
-    stream: { write: (message: string) => logger.info(message.trim()) },
-  })
-);
+// ── Logging (skipped in test env) ────────────────────────────────────────────
+if (env.NODE_ENV !== 'test') {
+  app.use(
+    morgan('combined', {
+      stream: { write: (message: string) => logger.info(message.trim()) },
+    })
+  );
+}
 
 // ── Rate Limiting ─────────────────────────────────────────────────────────────
+// Skip rate limiting in development & tests to avoid frustrating local flows.
+const skipLimiterInDev = (_req: express.Request) => env.NODE_ENV !== 'production';
+
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 600, // generous default for normal usage
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: skipLimiterInDev,
   message: { success: false, error: { code: 'RATE_LIMIT', message: 'Too many requests' } },
 });
 app.use('/api', globalLimiter);
 
 const authLimiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS,
-  max: env.RATE_LIMIT_MAX_REQUESTS, // e.g. 5 requests per 15 min for auth
+  // Login attempts: only count failures to avoid locking out users typing fast
+  max: Math.max(env.RATE_LIMIT_MAX_REQUESTS, 20),
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: skipLimiterInDev,
   message: { success: false, error: { code: 'RATE_LIMIT', message: 'Too many auth requests' } },
 });
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
+// Alias for the frontend admin user-management screen
+app.use('/api/admin/users', userRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/rfqs', rfqRoutes);
 app.use('/api/quotations', quotationRoutes);
@@ -66,14 +81,15 @@ app.use('/api/purchase-orders', poRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/activity-logs', activityLogRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.status(200).json({ success: true, data: { status: 'OK', timestamp: new Date() } });
 });
 
 // Handle 404
-app.use((req, res) => {
+app.use((_req, res) => {
   res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Route not found' } });
 });
 

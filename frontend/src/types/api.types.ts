@@ -13,18 +13,18 @@ export interface ApiResponse<T = unknown> {
   success: boolean;
   message?: string;
   data?: T;
+  error?: { code: string; message: string; details?: unknown };
 }
 
-export interface PaginatedResponse<T = unknown> {
-  success: boolean;
-  message?: string;
-  data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+/**
+ * Wraps an array response from a paginated endpoint.
+ * Backend returns `data: { items, total, page, limit }`.
+ */
+export interface PaginatedData<T = unknown> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 // ─── User ────────────────────────────────────────────────────────────────────
@@ -37,22 +37,41 @@ export interface User {
   role: UserRole;
   isActive: boolean;
   vendorId?: string;
-  lastLoginAt?: string;
+  lastLoginAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 // ─── Vendor ──────────────────────────────────────────────────────────────────
 
+export interface VendorAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  country?: string;
+}
+
+export interface VendorCategory {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+/**
+ * Frontend-friendly shape. The API layer maps backend fields:
+ *   companyName -> name
+ *   gstin       -> gstNumber
+ *   pan         -> panNumber
+ *   address     -> stringified address (kept as object too)
+ */
 export interface Vendor {
   id: string;
   name: string;
   email: string;
   phone?: string;
   address?: string;
-  city?: string;
-  state?: string;
-  pincode?: string;
+  addressObj?: VendorAddress;
   gstNumber?: string;
   panNumber?: string;
   contactPerson?: string;
@@ -75,6 +94,7 @@ export interface RFQ {
   status: RFQStatus;
   deadline?: string;
   createdBy: string;
+  creatorName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -85,13 +105,15 @@ export interface Quotation {
   id: string;
   quotationNumber: string;
   rfqId?: string;
+  rfqTitle?: string;
   vendorId: string;
+  vendorName?: string;
   status: QuotationStatus;
   totalAmount: number;
   validUntil?: string;
   terms?: string;
   notes?: string;
-  submittedAt: string;
+  submittedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -102,10 +124,11 @@ export interface PurchaseOrder {
   id: string;
   poNumber: string;
   vendorId: string;
+  vendorName?: string;
   quotationId?: string;
   status: POStatus;
   totalAmount: number;
-  shippingAddress?: string;
+  shippingAddress?: VendorAddress;
   terms?: string;
   expectedDelivery?: string;
   issuedAt?: string;
@@ -119,11 +142,14 @@ export interface Invoice {
   id: string;
   invoiceNumber: string;
   vendorId: string;
+  vendorName?: string;
   purchaseOrderId?: string;
+  poNumber?: string;
   status: InvoiceStatus;
+  subtotal?: number;
+  totalCgst?: number;
+  totalSgst?: number;
   totalAmount: number;
-  taxAmount: number;
-  netAmount: number;
   dueDate?: string;
   paidAt?: string;
   notes?: string;
@@ -141,5 +167,5 @@ export interface LoginRequest {
 export interface AuthResponse {
   user: User;
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
 }

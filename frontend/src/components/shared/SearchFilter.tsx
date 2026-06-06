@@ -31,47 +31,44 @@ export function SearchFilter({
     const handler = setTimeout(() => {
       onSearch(searchTerm);
     }, 300);
-
-    return () => {
-      clearTimeout(handler);
-    };
+    return () => clearTimeout(handler);
   }, [searchTerm, onSearch]);
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center w-full mb-6">
-      {/* Search Input */}
-      <div className="relative flex-1">
-        <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
-          <Search size={18} />
+    <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center">
+      <div className="input-group flex-1 max-w-md">
+        <span className="input-group__icon">
+          <Search size={16} />
         </span>
         <input
-          type="text"
+          type="search"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder={placeholder}
-          className="w-full pl-10 pr-4 py-2 text-sm rounded-md bg-surface border border-default text-primary placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-light transition-all"
+          className="input input--with-icon"
         />
       </div>
 
-      {/* Dynamic Dropdowns */}
-      {filters.map((filter) => (
-        <div key={filter.key} className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-muted whitespace-nowrap">
-            {filter.label}:
-          </span>
-          <select
-            onChange={(e) => onFilter(filter.key, e.target.value)}
-            className="px-3 py-2 text-sm rounded-md bg-surface border border-default text-primary focus:outline-none focus:border-primary cursor-pointer min-w-[140px]"
-          >
-            <option value="">All</option>
-            {filter.options.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+      {filters.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {filters.map((filter) => (
+            <select
+              key={filter.key}
+              onChange={(e) => onFilter(filter.key, e.target.value)}
+              className="input"
+              style={{ width: 'auto', minWidth: 160 }}
+              defaultValue=""
+            >
+              <option value="">All {filter.label.toLowerCase()}</option>
+              {filter.options.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }

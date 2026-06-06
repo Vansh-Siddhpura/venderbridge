@@ -4,192 +4,211 @@ import { useAuth } from '@/hooks/useAuth';
 import { PageHeader, StatCard, DataTable, StatusBadge } from '@/components/shared';
 import type { ColumnDef } from '@/components/shared/DataTable';
 import { formatCurrency, formatDate } from '@/utils/formatters';
-import { CheckSquare, FileText, ShoppingCart, Receipt, PlusCircle, Building2, UserPlus, FileSpreadsheet } from 'lucide-react';
+import {
+  ClipboardCheck,
+  FileText,
+  ShoppingCart,
+  Receipt,
+  Plus,
+  Building2,
+  UserPlus,
+  ArrowRight,
+} from 'lucide-react';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { isAdmin, isProcurementOfficer, isVendor } = useAuth();
-  
+  const { user, isAdmin, isProcurementOfficer, isVendor } = useAuth();
   const { data, isLoading } = useDashboardQuery();
 
   const { stats, recentRFQs = [], recentInvoices = [] } = data || {};
 
-  const handleRfqClick = (row: any) => {
-    navigate(`/rfqs/${row.id}`);
-  };
-
-  const handleInvoiceClick = (row: any) => {
-    navigate(`/invoices/${row.id}`);
-  };
-
   const rfqColumns: ColumnDef[] = [
     {
-      header: 'RFQ Ref',
-      cell: (row) => <span className="font-bold text-slate-900 dark:text-slate-100">{row.rfqNumber}</span>,
+      header: 'RFQ',
+      cell: (row) => (
+        <div>
+          <div className="font-medium text-primary">{row.rfqNumber}</div>
+          <div className="text-xs text-muted">{row.title}</div>
+        </div>
+      ),
     },
-    { header: 'Title', accessorKey: 'title' },
-    {
-      header: 'Status',
-      cell: (row) => <StatusBadge status={row.status} />,
-    },
+    { header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
     {
       header: 'Deadline',
-      cell: (row) => <span>{formatDate(row.deadline)}</span>,
+      cell: (row) => row.deadline ? <span className="text-secondary">{formatDate(row.deadline)}</span> : <span className="text-muted">—</span>,
     },
   ];
 
   const invoiceColumns: ColumnDef[] = [
     {
-      header: 'Invoice No',
-      cell: (row) => <span className="font-bold text-slate-900 dark:text-slate-100">{row.invoiceNumber}</span>,
+      header: 'Invoice',
+      cell: (row) => (
+        <div>
+          <div className="font-medium text-primary">{row.invoiceNumber}</div>
+          <div className="text-xs text-muted">{row.vendorName}</div>
+        </div>
+      ),
     },
-    { header: 'Vendor', accessorKey: 'vendorName' },
     {
       header: 'Amount',
-      cell: (row) => <span className="font-semibold">{formatCurrency(row.totalAmount)}</span>,
+      align: 'right',
+      cell: (row) => <span className="font-medium tabular-nums">{formatCurrency(row.totalAmount)}</span>,
+    },
+    { header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
+  ];
+
+  const quickActions: Array<{ label: string; description: string; icon: typeof Plus; path: string; show: boolean }> = [
+    {
+      label: 'Create RFQ',
+      description: 'Publish a new request for quotation',
+      icon: Plus,
+      path: '/rfqs/new',
+      show: !!(isProcurementOfficer || isAdmin),
     },
     {
-      header: 'Status',
-      cell: (row) => <StatusBadge status={row.status} />,
+      label: 'Add vendor',
+      description: 'Onboard a new vendor to the registry',
+      icon: Building2,
+      path: '/vendors/new',
+      show: !!isAdmin,
+    },
+    {
+      label: 'Invite a team member',
+      description: 'Add officers or managers to the workspace',
+      icon: UserPlus,
+      path: '/admin/users',
+      show: !!isAdmin,
+    },
+    {
+      label: isVendor ? 'Submit a bid' : 'Browse purchase orders',
+      description: isVendor
+        ? 'Quote on RFQs you were invited to'
+        : 'Review issued purchase orders and statuses',
+      icon: isVendor ? FileText : ShoppingCart,
+      path: isVendor ? '/rfqs' : '/purchase-orders',
+      show: true,
     },
   ];
+
+  const visibleActions = quickActions.filter((a) => a.show);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Dashboard`}
+        title={`Welcome back${user?.firstName ? `, ${user.firstName}` : ''}`}
+        subtitle="Here's an overview of your procurement activity."
         breadcrumbs={[{ label: 'Home' }, { label: 'Dashboard' }]}
       />
 
-      {/* Overview stats cards grid */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, idx) => (
-            <div key={idx} className="h-24 bg-surface border border-default rounded animate-pulse" />
+            <div key={idx} className="card card__body">
+              <div className="skeleton h-4 w-1/3" />
+              <div className="skeleton mt-3 h-8 w-1/2" />
+              <div className="skeleton mt-3 h-3 w-3/4" />
+            </div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            label="Pending Approvals"
+            label="Pending approvals"
             value={stats?.pendingApprovals ?? 0}
-            icon={CheckSquare}
-            trend={{ value: '+4%', direction: 'up' }}
+            icon={ClipboardCheck}
+            hint="Quotations awaiting review"
           />
           <StatCard
             label="Active RFQs"
             value={stats?.activeRFQs ?? 0}
             icon={FileText}
-            trend={{ value: 'Stable', direction: 'up' }}
+            hint="Published &amp; accepting bids"
           />
           <StatCard
-            label="Purchase Orders"
+            label="POs this month"
             value={stats?.posThisMonth ?? 0}
             icon={ShoppingCart}
-            trend={{ value: '+12%', direction: 'up' }}
+            hint="Issued in the current month"
           />
           <StatCard
-            label="Invoices Outstanding"
+            label="Outstanding invoices"
             value={formatCurrency(stats?.invoicesOutstanding ?? 0)}
             icon={Receipt}
-            trend={{ value: '-8%', direction: 'down' }}
+            hint="Unpaid or overdue"
           />
         </div>
       )}
 
-      {/* Role based Quick Action panel */}
-      <div className="glass-panel rounded-xl p-6 space-y-5">
-        <h3 className="text-sm font-extrabold text-primary uppercase tracking-widest border-b border-default pb-3">
-          Procurement Quick Console
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {(isProcurementOfficer || isAdmin) && (
-            <button
-              onClick={() => navigate('/rfqs/new')}
-              className="p-5 glass-card text-left flex flex-col gap-3 group"
-            >
-              <PlusCircle size={28} className="text-primary group-hover:scale-110 group-hover:text-purple-500 transition-all" />
-              <div>
-                <span className="text-sm font-bold text-primary block">New RFQ Sheet</span>
-                <span className="text-[11px] text-muted block mt-1">Publish new material bids</span>
-              </div>
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              onClick={() => navigate('/vendors/new')}
-              className="p-5 glass-card text-left flex flex-col gap-3 group"
-            >
-              <Building2 size={28} className="text-primary group-hover:scale-110 group-hover:text-purple-500 transition-all" />
-              <div>
-                <span className="text-sm font-bold text-primary block">Register Vendor</span>
-                <span className="text-[11px] text-muted block mt-1">Onboard business vendors</span>
-              </div>
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              onClick={() => navigate('/admin/users')}
-              className="p-5 glass-card text-left flex flex-col gap-3 group"
-            >
-              <UserPlus size={28} className="text-primary group-hover:scale-110 group-hover:text-purple-500 transition-all" />
-              <div>
-                <span className="text-sm font-bold text-primary block">Create User</span>
-                <span className="text-[11px] text-muted block mt-1">Setup staff role access</span>
-              </div>
-            </button>
-          )}
-          {isVendor && (
-            <button
-              onClick={() => navigate('/rfqs')}
-              className="p-5 glass-card text-left flex flex-col gap-3 group"
-            >
-              <FileSpreadsheet size={28} className="text-primary group-hover:scale-110 group-hover:text-purple-500 transition-all" />
-              <div>
-                <span className="text-sm font-bold text-primary block">Submit Bids</span>
-                <span className="text-[11px] text-muted block mt-1">Quote pricing on assignments</span>
-              </div>
-            </button>
-          )}
-          {/* All users shortcut */}
-          <button
-            onClick={() => navigate('/purchase-orders')}
-            className="p-5 glass-card text-left flex flex-col gap-3 group"
-          >
-            <ShoppingCart size={28} className="text-primary group-hover:scale-110 group-hover:text-purple-500 transition-all" />
+      {visibleActions.length > 0 && (
+        <section className="card">
+          <div className="card__header">
             <div>
-              <span className="text-sm font-bold text-primary block">PO Catalog</span>
-              <span className="text-[11px] text-muted block mt-1">View purchase orders list</span>
+              <h2 className="card__title">Quick actions</h2>
+              <p className="mt-1 text-xs text-muted">Shortcuts to the most common procurement tasks.</p>
             </div>
-          </button>
-        </div>
-      </div>
+          </div>
+          <div className="grid grid-cols-1 gap-3 p-5 md:grid-cols-2 lg:grid-cols-4">
+            {visibleActions.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                onClick={() => navigate(action.path)}
+                className="flex flex-col items-start gap-2 rounded-lg border border-default bg-elevated p-4 text-left transition hover:border-strong hover:bg-muted"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary-light text-brand">
+                  <action.icon size={18} />
+                </span>
+                <span className="text-sm font-semibold text-primary">{action.label}</span>
+                <span className="text-xs text-muted">{action.description}</span>
+                <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-brand">
+                  Open <ArrowRight size={12} />
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* Recent Activity lists grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-3">
-          <h3 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1">
-            <FileText size={16} /> Recent Request for Quotations (RFQs)
-          </h3>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className="card">
+          <div className="card__header">
+            <h2 className="card__title">Recent RFQs</h2>
+            <button
+              type="button"
+              onClick={() => navigate('/rfqs')}
+              className="btn btn--ghost btn--sm"
+            >
+              View all <ArrowRight size={14} />
+            </button>
+          </div>
           <DataTable
             columns={rfqColumns}
             data={recentRFQs}
             isLoading={isLoading}
-            onRowClick={handleRfqClick}
+            onRowClick={(row) => navigate(`/rfqs/${row.id}`)}
+            emptyMessage="No RFQs yet."
           />
-        </div>
+        </section>
 
-        <div className="space-y-3">
-          <h3 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1">
-            <Receipt size={16} /> Recent Vendor Invoices
-          </h3>
+        <section className="card">
+          <div className="card__header">
+            <h2 className="card__title">Recent invoices</h2>
+            <button
+              type="button"
+              onClick={() => navigate('/invoices')}
+              className="btn btn--ghost btn--sm"
+            >
+              View all <ArrowRight size={14} />
+            </button>
+          </div>
           <DataTable
             columns={invoiceColumns}
             data={recentInvoices}
             isLoading={isLoading}
-            onRowClick={handleInvoiceClick}
+            onRowClick={(row) => navigate(`/invoices/${row.id}`)}
+            emptyMessage="No invoices yet."
           />
-        </div>
+        </section>
       </div>
     </div>
   );

@@ -2,14 +2,15 @@ export enum UserRole {
   ADMIN = 'ADMIN',
   MANAGER = 'MANAGER',
   PROCUREMENT_OFFICER = 'PROCUREMENT_OFFICER',
-  VIEWER = 'VIEWER',
+  VIEWER = 'VIEWER', // kept for backwards compatibility with frontend code paths
   VENDOR = 'VENDOR',
 }
 
 export enum VendorStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  BLACKLISTED = 'BLACKLISTED',
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  SUSPENDED = 'SUSPENDED',
 }
 
 export enum RFQStatus {
@@ -20,39 +21,37 @@ export enum RFQStatus {
 }
 
 export enum RFQVendorStatus {
-  PENDING = 'PENDING',
-  RESPONDED = 'RESPONDED',
+  INVITED = 'INVITED',
+  VIEWED = 'VIEWED',
+  SUBMITTED = 'SUBMITTED',
   DECLINED = 'DECLINED',
-  NO_RESPONSE = 'NO_RESPONSE',
 }
 
 export enum QuotationStatus {
+  DRAFT = 'DRAFT',
   SUBMITTED = 'SUBMITTED',
-  UNDER_REVIEW = 'UNDER_REVIEW',
-  ACCEPTED = 'ACCEPTED',
+  SHORTLISTED = 'SHORTLISTED',
   REJECTED = 'REJECTED',
+  SELECTED = 'SELECTED',
 }
 
 export enum ApprovalAction {
-  PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
+  APPROVE = 'APPROVE',
+  REJECT = 'REJECT',
+  REQUEST_REVISION = 'REQUEST_REVISION',
 }
 
 export enum POStatus {
-  DRAFT = 'DRAFT',
-  ISSUED = 'ISSUED',
+  PENDING = 'PENDING',
   ACKNOWLEDGED = 'ACKNOWLEDGED',
-  PARTIALLY_DELIVERED = 'PARTIALLY_DELIVERED',
-  DELIVERED = 'DELIVERED',
+  FULFILLED = 'FULFILLED',
   CANCELLED = 'CANCELLED',
 }
 
 export enum InvoiceStatus {
   DRAFT = 'DRAFT',
-  SUBMITTED = 'SUBMITTED',
-  APPROVED = 'APPROVED',
+  SENT = 'SENT',
   PAID = 'PAID',
-  DISPUTED = 'DISPUTED',
+  OVERDUE = 'OVERDUE',
   CANCELLED = 'CANCELLED',
 }

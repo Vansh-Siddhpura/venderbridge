@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 
+TESTING.md
 # Build output
 dist/
 build/

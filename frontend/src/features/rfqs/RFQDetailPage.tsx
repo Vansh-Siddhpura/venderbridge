@@ -27,12 +27,9 @@ export default function RFQDetailPage() {
 
   if (!rfq) {
     return (
-      <div className="text-center p-8 bg-surface border border-default rounded-lg">
-        <p className="text-muted">RFQ not found.</p>
-        <button
-          onClick={() => navigate('/rfqs')}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded font-semibold text-sm cursor-pointer"
-        >
+      <div className="empty">
+        <p className="empty__title">RFQ not found</p>
+        <button onClick={() => navigate('/rfqs')} className="btn btn--primary mt-4">
           Back to RFQs
         </button>
       </div>
@@ -43,7 +40,7 @@ export default function RFQDetailPage() {
   const vendorResponse = rfq.assignedVendors?.find(
     (av: any) => av.vendorId === user?.vendorId
   );
-  const hasResponded = vendorResponse?.status === RFQVendorStatus.RESPONDED;
+  const hasResponded = vendorResponse?.status === RFQVendorStatus.SUBMITTED;
 
   const showSubmitBtn = isVendor && rfq.status === RFQStatus.PUBLISHED;
   const showCompareBtn = !isVendor && rfq.status !== RFQStatus.DRAFT;
@@ -60,7 +57,7 @@ export default function RFQDetailPage() {
         action={
           <button
             onClick={() => navigate('/rfqs')}
-            className="px-4 py-2 border border-default rounded-md text-sm font-semibold text-primary hover:bg-primary-light flex items-center gap-2 cursor-pointer"
+            className="btn btn--secondary flex items-center gap-2"
           >
             <ArrowLeft size={16} />
             Back
@@ -70,7 +67,8 @@ export default function RFQDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Core details */}
-        <div className="lg:col-span-2 bg-surface border border-default rounded-lg p-6 shadow-sm space-y-6">
+        <div className="card lg:col-span-2">
+          <div className="card__body space-y-6">
           <div className="flex justify-between items-start pb-4 border-b border-default">
             <div>
               <span className="text-xs font-semibold text-muted uppercase tracking-wider block">
@@ -138,10 +136,11 @@ export default function RFQDetailPage() {
               </table>
             </div>
           </div>
+          </div>
         </div>
 
-        {/* Vendors assignment & status */}
-        <div className="bg-surface border border-default rounded-lg p-6 shadow-sm h-fit space-y-6">
+        <div className="card h-fit">
+          <div className="card__body space-y-6">
           <div>
             <h3 className="text-sm font-bold text-muted uppercase tracking-wider pb-2 border-b border-default mb-4">
               Vendors & Submissions
@@ -189,7 +188,7 @@ export default function RFQDetailPage() {
             {showSubmitBtn && (
               <button
                 onClick={() => navigate(`/rfqs/${rfq.id}/quotations`)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                className="btn btn--primary btn--block btn--sm uppercase tracking-wider"
               >
                 <FileSpreadsheet size={14} />
                 {hasResponded ? 'View / Edit Quotation' : 'Submit Quotation'}
@@ -199,7 +198,7 @@ export default function RFQDetailPage() {
             {showCompareBtn && (
               <button
                 onClick={() => navigate(`/rfqs/${rfq.id}/quotations`)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                className="btn btn--primary btn--block btn--sm uppercase tracking-wider"
               >
                 <Eye size={14} />
                 Compare Quotations
@@ -210,12 +209,13 @@ export default function RFQDetailPage() {
               <button
                 onClick={handleCloseRFQ}
                 disabled={updateRFQMutation.isPending}
-                className="w-full bg-black hover:bg-slate-900 text-white py-2 rounded-md font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="btn btn--secondary btn--block btn--sm uppercase tracking-wider disabled:opacity-50"
               >
                 <Ban size={14} />
                 Close Bidding
               </button>
             )}
+          </div>
           </div>
         </div>
       </div>

@@ -22,11 +22,25 @@ const userSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   firstName: z.string().min(2, 'First name is required'),
   lastName: z.string().min(2, 'Last name is required'),
-  role: z.nativeEnum(UserRole, { message: 'Please select a role' }),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  role: z.enum(['ADMIN', 'PROCUREMENT_OFFICER', 'MANAGER'], {
+    message: 'Please select a role',
+  }),
+  password: z
+    .string()
+    .min(8, 'At least 8 characters')
+    .regex(/[A-Z]/, 'Include an uppercase letter')
+    .regex(/[0-9]/, 'Include a digit'),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Administrator',
+  PROCUREMENT_OFFICER: 'Procurement officer',
+  MANAGER: 'Manager',
+  VENDOR: 'Vendor',
+  VIEWER: 'Viewer',
+};
 
 export default function AdminUsersPage() {
   const { data: users = [], isLoading } = useUsersQuery();
@@ -47,7 +61,7 @@ export default function AdminUsersPage() {
   });
 
   const onSubmit = (data: UserFormValues) => {
-    createUserMutation.mutate(data, {
+    createUserMutation.mutate(data as any, {
       onSuccess: () => {
         setIsModalOpen(false);
         reset();
@@ -62,7 +76,6 @@ export default function AdminUsersPage() {
     });
   };
 
-  // Filters
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
       u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -75,47 +88,44 @@ export default function AdminUsersPage() {
     {
       header: 'Name',
       cell: (row) => (
-        <span className="font-semibold text-slate-900 dark:text-slate-100">
-          {row.firstName} {row.lastName}
-        </span>
+        <div>
+          <div className="font-medium text-primary">
+            {row.firstName} {row.lastName}
+          </div>
+          <div className="text-xs text-muted">{row.email}</div>
+        </div>
       ),
     },
-    { header: 'Email', accessorKey: 'email' },
     {
       header: 'Role',
-      cell: (row) => <StatusBadge status={row.role} />,
+      cell: (row) => <span className="text-secondary">{ROLE_LABELS[row.role] ?? row.role}</span>,
     },
     {
       header: 'Status',
       cell: (row) => (
-        <span
-          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${
-            row.isActive
-              ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
-              : 'bg-slate-100 text-slate-400 dark:bg-slate-900/50 dark:text-slate-600'
-          }`}
-        >
-          {row.isActive ? 'Active' : 'Inactive'}
-        </span>
+        <StatusBadge status={row.isActive ? 'ACTIVE' : 'INACTIVE'} />
       ),
     },
     {
-      header: 'Created At',
-      cell: (row) => <span>{formatDateTime(row.createdAt)}</span>,
+      header: 'Last login',
+      cell: (row) =>
+        row.lastLoginAt ? (
+          <span className="text-secondary">{formatDateTime(row.lastLoginAt)}</span>
+        ) : (
+          <span className="text-muted">—</span>
+        ),
     },
     {
       header: 'Actions',
+      align: 'right',
       cell: (row) => (
         <button
+          type="button"
           onClick={() => handleToggleStatus(row.id, row.isActive)}
-          className={`p-1.5 rounded border transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold uppercase tracking-wider ${
-            row.isActive
-              ? 'border-black text-black hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900'
-              : 'border-blue-600 text-blue-600 hover:bg-blue-50 dark:border-blue-900 dark:hover:bg-blue-950/40'
-          }`}
-          title={row.isActive ? 'Deactivate User' : 'Activate User'}
+          className="btn btn--secondary btn--sm"
+          title={row.isActive ? 'Deactivate user' : 'Activate user'}
         >
-          {row.isActive ? <UserX size={14} /> : <UserCheck size={14} />}
+          {row.isActive ? <UserX size={13} /> : <UserCheck size={13} />}
           {row.isActive ? 'Deactivate' : 'Activate'}
         </button>
       ),
@@ -126,22 +136,26 @@ export default function AdminUsersPage() {
     {
       key: 'role',
       label: 'Role',
-      options: Object.values(UserRole).map((r) => ({ label: r.replace('_', ' '), value: r })),
+      options: Object.values(UserRole)
+        .filter((r) => r !== UserRole.VIEWER)
+        .map((r) => ({ label: ROLE_LABELS[r] ?? r, value: r })),
     },
   ];
 
   return (
-    <div className="relative">
+    <div>
       <PageHeader
-        title="User Management"
-        breadcrumbs={[{ label: 'Admin', href: '#' }, { label: 'Users' }]}
+        title="Users"
+        subtitle="Provision admins, managers, officers and vendor accounts."
+        breadcrumbs={[{ label: 'Administration' }, { label: 'Users' }]}
         action={
           <button
+            type="button"
             onClick={() => setIsModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-semibold text-sm cursor-pointer flex items-center gap-2"
+            className="btn btn--primary"
           >
             <UserPlus size={16} />
-            Add New User
+            Add user
           </button>
         }
       />
@@ -150,116 +164,77 @@ export default function AdminUsersPage() {
         onSearch={setSearchTerm}
         onFilter={(_, val) => setRoleFilter(val)}
         filters={filterConfigs}
-        placeholder="Search users by name or email..."
+        placeholder="Search by name or email"
       />
 
-      <DataTable columns={columns} data={filteredUsers} isLoading={isLoading} />
+      <DataTable
+        columns={columns}
+        data={filteredUsers}
+        isLoading={isLoading}
+        emptyMessage="No users match these filters."
+      />
 
-      {/* User Create Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-surface border border-default rounded-lg shadow-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-default flex justify-between items-center bg-elevated">
-              <h3 className="text-lg font-bold text-primary">Create User Profile</h3>
+        <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal__header">
+              <h3 className="text-base font-semibold text-primary">Create user</h3>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-muted hover:text-primary cursor-pointer"
+                className="app-shell__icon-btn"
+                aria-label="Close"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <div className="modal__body grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold text-primary mb-1">First Name</label>
-                  <input
-                    type="text"
-                    {...register('firstName')}
-                    placeholder="Ananya"
-                    className="w-full px-3 py-2 text-sm rounded bg-surface border border-default text-primary focus:outline-none focus:border-primary"
-                  />
-                  {errors.firstName && (
-                    <p className="text-[10px] text-red-500 font-semibold mt-1">
-                      {errors.firstName.message}
-                    </p>
-                  )}
+                  <label className="input-label" htmlFor="firstName">First name</label>
+                  <input id="firstName" type="text" {...register('firstName')} className="input" placeholder="Ananya" />
+                  {errors.firstName && <span className="input-error">{errors.firstName.message}</span>}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-primary mb-1">Last Name</label>
-                  <input
-                    type="text"
-                    {...register('lastName')}
-                    placeholder="Sharma"
-                    className="w-full px-3 py-2 text-sm rounded bg-surface border border-default text-primary focus:outline-none focus:border-primary"
-                  />
-                  {errors.lastName && (
-                    <p className="text-[10px] text-red-500 font-semibold mt-1">
-                      {errors.lastName.message}
-                    </p>
-                  )}
+                  <label className="input-label" htmlFor="lastName">Last name</label>
+                  <input id="lastName" type="text" {...register('lastName')} className="input" placeholder="Sharma" />
+                  {errors.lastName && <span className="input-error">{errors.lastName.message}</span>}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="input-label" htmlFor="email">Email</label>
+                  <input id="email" type="email" {...register('email')} className="input" placeholder="name@company.com" />
+                  {errors.email && <span className="input-error">{errors.email.message}</span>}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="input-label" htmlFor="password">Temporary password</label>
+                  <input id="password" type="password" {...register('password')} className="input" placeholder="At least 8 chars, 1 uppercase, 1 digit" />
+                  {errors.password && <span className="input-error">{errors.password.message}</span>}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="input-label" htmlFor="role">Role</label>
+                  <select id="role" {...register('role')} className="input" defaultValue="">
+                    <option value="">Select role</option>
+                    <option value="ADMIN">Administrator</option>
+                    <option value="PROCUREMENT_OFFICER">Procurement officer</option>
+                    <option value="MANAGER">Manager</option>
+                  </select>
+                  {errors.role && <span className="input-error">{errors.role.message}</span>}
                 </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-primary mb-1">Email Address</label>
-                <input
-                  type="email"
-                  {...register('email')}
-                  placeholder="name@company.com"
-                  className="w-full px-3 py-2 text-sm rounded bg-surface border border-default text-primary focus:outline-none focus:border-primary"
-                />
-                {errors.email && (
-                  <p className="text-[10px] text-red-500 font-semibold mt-1">
-                    {errors.email.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-primary mb-1">Password</label>
-                <input
-                  type="password"
-                  {...register('password')}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2 text-sm rounded bg-surface border border-default text-primary focus:outline-none focus:border-primary"
-                />
-                {errors.password && (
-                  <p className="text-[10px] text-red-500 font-semibold mt-1">
-                    {errors.password.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-primary mb-1">Role</label>
-                <select
-                  {...register('role')}
-                  className="w-full px-3 py-2 text-sm rounded bg-surface border border-default text-primary focus:outline-none focus:border-primary cursor-pointer"
-                >
-                  <option value="">Select role</option>
-                  <option value={UserRole.ADMIN}>Admin</option>
-                  <option value={UserRole.PROCUREMENT_OFFICER}>Procurement Officer</option>
-                  <option value={UserRole.MANAGER}>Manager</option>
-                  <option value={UserRole.VENDOR}>Vendor</option>
-                </select>
-                {errors.role && (
-                  <p className="text-[10px] text-red-500 font-semibold mt-1">{errors.role.message}</p>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-default">
+              <div className="modal__footer">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm font-semibold rounded border border-default text-primary hover:bg-primary-light cursor-pointer"
+                  className="btn btn--secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-semibold rounded bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                  disabled={createUserMutation.isPending}
+                  className="btn btn--primary"
                 >
-                  Create User
+                  {createUserMutation.isPending ? 'Creating…' : 'Create user'}
                 </button>
               </div>
             </form>

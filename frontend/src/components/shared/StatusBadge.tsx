@@ -1,37 +1,60 @@
-
 interface StatusBadgeProps {
-  status: string;
+  status?: string | null;
 }
+
+type Tone = 'success' | 'warning' | 'error' | 'info' | 'neutral';
+
+const TONE_MAP: Record<string, Tone> = {
+  // Success / accepted / paid
+  APPROVED: 'success',
+  ACCEPTED: 'success',
+  SELECTED: 'success',
+  FULFILLED: 'success',
+  DELIVERED: 'success',
+  PAID: 'success',
+  ACTIVE: 'success',
+
+  // In progress / under review
+  PUBLISHED: 'info',
+  SUBMITTED: 'info',
+  SENT: 'info',
+  SHORTLISTED: 'info',
+  ACKNOWLEDGED: 'info',
+  UNDER_REVIEW: 'info',
+  PARTIALLY_DELIVERED: 'info',
+  ISSUED: 'info',
+  RESPONDED: 'info',
+  VIEWED: 'info',
+
+  // Pending / draft / invited
+  PENDING: 'warning',
+  DRAFT: 'neutral',
+  INVITED: 'neutral',
+  NO_RESPONSE: 'neutral',
+  INACTIVE: 'neutral',
+
+  // Rejected / cancelled / suspended / blacklisted / overdue / disputed
+  REJECTED: 'error',
+  DECLINED: 'error',
+  CANCELLED: 'error',
+  SUSPENDED: 'error',
+  BLACKLISTED: 'error',
+  OVERDUE: 'error',
+  DISPUTED: 'error',
+};
+
+const humanize = (s: string) =>
+  s.replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, (m) => m.toUpperCase());
 
 export function StatusBadge({ status }: StatusBadgeProps) {
   if (!status) return null;
-  
   const norm = status.toUpperCase();
-
-  let modifierClass = '';
-  let dotColorClass = '';
-
-  if (['DRAFT', 'PENDING', 'INVITED'].includes(norm)) {
-    modifierClass = 'status-badge--default';
-    dotColorClass = 'bg-slate-400';
-  } else if (['PUBLISHED', 'SUBMITTED', 'SENT', 'VIEWED', 'UNDER_REVIEW', 'SHORTLISTED', 'ACKNOWLEDGED'].includes(norm)) {
-    modifierClass = 'status-badge--info';
-    dotColorClass = 'bg-blue-500';
-  } else if (['APPROVED', 'SELECTED', 'FULFILLED', 'PAID', 'ACCEPTED', 'ACTIVE'].includes(norm)) {
-    modifierClass = 'status-badge--success';
-    dotColorClass = 'bg-emerald-500';
-  } else if (['REJECTED', 'CANCELLED', 'SUSPENDED', 'OVERDUE', 'BLACKLISTED', 'INACTIVE'].includes(norm)) {
-    modifierClass = 'status-badge--error';
-    dotColorClass = 'bg-red-500';
-  } else {
-    modifierClass = 'status-badge--default';
-    dotColorClass = 'bg-slate-400';
-  }
+  const tone: Tone = TONE_MAP[norm] ?? 'neutral';
 
   return (
-    <span className={`status-badge ${modifierClass} inline-flex items-center gap-1.5`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${dotColorClass}`} />
-      {status}
+    <span className={`badge badge--${tone}`}>
+      <span className="badge__dot" />
+      {humanize(status)}
     </span>
   );
 }

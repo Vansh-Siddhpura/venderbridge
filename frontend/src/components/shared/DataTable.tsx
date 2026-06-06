@@ -4,6 +4,8 @@ export interface ColumnDef {
   header: string;
   accessorKey?: string;
   cell?: (row: any) => React.ReactNode;
+  align?: 'left' | 'right' | 'center';
+  width?: string;
 }
 
 interface Pagination {
@@ -20,6 +22,7 @@ interface DataTableProps {
   isLoading: boolean;
   pagination?: Pagination;
   onRowClick?: (row: any) => void;
+  emptyMessage?: string;
 }
 
 export function DataTable({
@@ -28,15 +31,23 @@ export function DataTable({
   isLoading,
   pagination,
   onRowClick,
+  emptyMessage = 'No records found.',
 }: DataTableProps) {
+  const alignClass = (a?: 'left' | 'right' | 'center') =>
+    a === 'right' ? 'text-right' : a === 'center' ? 'text-center' : 'text-left';
+
   return (
-    <div className="data-table w-full flex flex-col">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+    <div className="data-table">
+      <div className="data-table__scroll">
+        <table>
           <thead>
             <tr>
               {columns.map((col, idx) => (
-                <th key={idx}>
+                <th
+                  key={idx}
+                  className={alignClass(col.align)}
+                  style={col.width ? { width: col.width } : undefined}
+                >
                   {col.header}
                 </th>
               ))}
@@ -44,38 +55,33 @@ export function DataTable({
           </thead>
           <tbody>
             {isLoading ? (
-              // Loading Skeleton Rows
               Array.from({ length: 5 }).map((_, rIdx) => (
-                <tr key={rIdx} className="hover:bg-primary-light/40 transition-colors animate-pulse">
+                <tr key={rIdx}>
                   {columns.map((_, cIdx) => (
-                    <td key={cIdx} className="px-6 py-4">
-                      <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
+                    <td key={cIdx}>
+                      <div className="skeleton h-4 w-3/4" />
                     </td>
                   ))}
                 </tr>
               ))
             ) : data.length === 0 ? (
-              // Empty Row
               <tr>
-                <td colSpan={columns.length} className="px-6 py-10 text-center text-sm text-muted">
-                  No records found.
+                <td colSpan={columns.length} className="data-table__empty">
+                  {emptyMessage}
                 </td>
               </tr>
             ) : (
-              // Data Rows
               data.map((row, rIdx) => (
                 <tr
-                  key={row.id || rIdx}
-                  onClick={() => onRowClick?.(row)}
-                  className={`text-sm text-primary transition-colors hover:bg-primary-light/40 border-b border-default last:border-b-0 ${
-                    onRowClick ? 'cursor-pointer' : ''
-                  }`}
+                  key={row.id ?? rIdx}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  className={onRowClick ? 'data-table__row--clickable' : ''}
                 >
                   {columns.map((col, cIdx) => {
                     const value = col.accessorKey ? row[col.accessorKey] : undefined;
                     return (
-                      <td key={cIdx} className="px-6 py-4 font-medium align-middle">
-                        {col.cell ? col.cell(row) : value !== undefined ? String(value) : '-'}
+                      <td key={cIdx} className={alignClass(col.align)}>
+                        {col.cell ? col.cell(row) : value !== undefined && value !== null ? String(value) : '—'}
                       </td>
                     );
                   })}
@@ -86,25 +92,26 @@ export function DataTable({
         </table>
       </div>
 
-      {/* Pagination Footer */}
       {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between px-6 py-4 bg-elevated border-t border-default text-xs font-semibold text-muted">
+        <div className="data-table__pagination">
           <div>
-            Showing <span className="text-primary">{data.length}</span> of{' '}
-            <span className="text-primary">{pagination.total}</span> records
+            Page <span className="font-medium text-primary">{pagination.page}</span> of {pagination.totalPages}
+            <span className="ml-2 text-subtle">({pagination.total} results)</span>
           </div>
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => pagination.onPageChange?.(pagination.page - 1)}
               disabled={pagination.page <= 1}
-              className="px-3 py-1.5 rounded border border-default bg-surface hover:bg-primary-light text-primary transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+              className="btn btn--secondary btn--sm"
             >
               Previous
             </button>
             <button
+              type="button"
               onClick={() => pagination.onPageChange?.(pagination.page + 1)}
               disabled={pagination.page >= pagination.totalPages}
-              className="px-3 py-1.5 rounded border border-default bg-surface hover:bg-primary-light text-primary transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+              className="btn btn--secondary btn--sm"
             >
               Next
             </button>

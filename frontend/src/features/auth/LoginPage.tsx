@@ -6,7 +6,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { loginUser } from '@/api/api';
 import toast from 'react-hot-toast';
-import { Shield, Lock, Mail, ArrowRight } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -15,17 +15,18 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+// These match the credentials produced by `npx prisma db seed`
 const QUICK_PROFILES = [
-  { label: 'Admin', email: 'admin@vendorbridge.com', pass: 'admin123' },
-  { label: 'Officer', email: 'officer@vendorbridge.com', pass: 'officer123' },
-  { label: 'Manager', email: 'manager@vendorbridge.com', pass: 'manager123' },
-  { label: 'Vendor', email: 'vendor1@vendorbridge.com', pass: 'vendor123' },
+  { label: 'Admin', email: 'admin@vendorbridge.com', pass: 'Admin@123' },
+  { label: 'Manager', email: 'manager@vendorbridge.com', pass: 'Manager@123' },
+  { label: 'Officer', email: 'officer@vendorbridge.com', pass: 'Officer@123' },
 ];
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuthStore();
   const [isLoading, setIsLoading] = React.useState(false);
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const {
     register,
@@ -44,7 +45,7 @@ export default function LoginPage() {
       toast.success(`Welcome back, ${response.user.firstName}!`);
       navigate('/dashboard');
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Login failed. Please try again.');
+      toast.error(err.response?.data?.error?.message || err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -57,96 +58,103 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="auth-layout__card w-full">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-black text-primary tracking-tight">Sign In</h2>
-        <p className="text-xs text-muted mt-1">Access VendorBridge Procurement Portal</p>
+    <div className="auth-card">
+      <div className="mb-8 text-center">
+        <h1 className="text-2xl font-bold tracking-tight text-primary">Sign in to VendorBridge</h1>
+        <p className="mt-2 text-sm text-muted">
+          Welcome back. Enter your credentials to continue.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Email Field */}
         <div>
-          <label className="block text-xs font-semibold text-primary mb-1">Email Address</label>
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted">
-              <Mail size={18} />
+          <label className="input-label" htmlFor="email">Work email</label>
+          <div className="input-group">
+            <span className="input-group__icon">
+              <Mail size={16} />
             </span>
             <input
+              id="email"
               type="email"
+              autoComplete="email"
               {...register('email')}
-              placeholder="name@company.com"
-              className="premium-input pl-11"
+              placeholder="you@company.com"
+              className="input input--with-icon"
             />
           </div>
-          {errors.email && (
-            <p className="text-[10px] text-red-500 font-semibold mt-1">{errors.email.message}</p>
-          )}
+          {errors.email && <span className="input-error">{errors.email.message}</span>}
         </div>
 
-        {/* Password Field */}
         <div>
-          <div className="flex justify-between items-center mb-1">
-            <label className="block text-xs font-semibold text-primary">Password</label>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className="input-label mb-0" htmlFor="password">Password</label>
             <Link
               to="/forgot-password"
-              className="text-[10px] text-primary hover:text-primary-hover hover:underline font-semibold transition-colors"
+              className="text-xs font-medium text-brand hover:underline"
             >
-              Forgot Password?
+              Forgot password?
             </Link>
           </div>
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted">
-              <Lock size={18} />
+          <div className="input-group">
+            <span className="input-group__icon">
+              <Lock size={16} />
             </span>
             <input
-              type="password"
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
               {...register('password')}
-              placeholder="••••••••"
-              className="premium-input pl-11"
+              placeholder="Enter your password"
+              className="input input--with-icon pr-10"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((s) => !s)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded text-subtle hover:text-primary hover:bg-muted"
+              tabIndex={-1}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
           </div>
-          {errors.password && (
-            <p className="text-[10px] text-red-500 font-semibold mt-1">{errors.password.message}</p>
-          )}
+          {errors.password && <span className="input-error">{errors.password.message}</span>}
         </div>
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={isLoading}
-          className="premium-button w-full mt-2 group"
+          className="btn btn--primary btn--block"
         >
-          {isLoading ? 'Signing In...' : 'Sign In'}
-          <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+          {isLoading ? 'Signing in…' : 'Sign in'}
+          {!isLoading && <ArrowRight size={16} />}
         </button>
       </form>
 
-      {/* Quick Presets */}
-      <div className="mt-6 border-t border-default pt-4">
-        <span className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-2 text-center">
-          Demo Presets
-        </span>
-        <div className="grid grid-cols-2 gap-2">
+      <div className="mt-6 border-t border-default pt-5">
+        <p className="mb-2 text-center text-xs font-medium text-muted">
+          Try a demo account
+        </p>
+        <div className="grid grid-cols-3 gap-2">
           {QUICK_PROFILES.map((profile) => (
             <button
               key={profile.label}
               type="button"
               onClick={() => handleQuickLogin(profile.email, profile.pass)}
-              className="px-2 py-1.5 rounded bg-surface border border-default text-xs font-semibold text-primary hover:bg-primary-light hover:border-primary transition-all cursor-pointer flex items-center justify-center gap-1"
+              disabled={isLoading}
+              className="btn btn--secondary btn--sm"
             >
-              <Shield size={12} className="text-primary" />
               {profile.label}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="text-center mt-6 text-xs text-muted font-medium">
-        Don't have an account?{' '}
-        <Link to="/signup" className="text-primary hover:underline font-bold">
-          Register here
+      <p className="mt-6 text-center text-sm text-muted">
+        New to VendorBridge?{' '}
+        <Link to="/signup" className="font-semibold text-brand hover:underline">
+          Create an account
         </Link>
-      </div>
+      </p>
     </div>
   );
 }

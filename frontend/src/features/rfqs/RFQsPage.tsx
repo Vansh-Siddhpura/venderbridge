@@ -22,33 +22,27 @@ export default function RFQsPage() {
 
   const columns: ColumnDef[] = [
     {
-      header: 'RFQ Number',
+      header: 'RFQ',
       cell: (row) => (
-        <span className="font-bold text-slate-900 dark:text-slate-100">
-          {row.rfqNumber}
-        </span>
+        <div>
+          <div className="font-medium text-primary">{row.rfqNumber}</div>
+          <div className="text-xs text-muted">{row.title}</div>
+        </div>
       ),
     },
-    {
-      header: 'Title',
-      cell: (row) => (
-        <span className="font-semibold text-slate-800 dark:text-slate-200">
-          {row.title}
-        </span>
-      ),
-    },
-    {
-      header: 'Status',
-      cell: (row) => <StatusBadge status={row.status} />,
-    },
+    { header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
     {
       header: 'Deadline',
-      cell: (row) => <span>{formatDate(row.deadline)}</span>,
+      cell: (row) =>
+        row.deadline ? <span className="text-secondary">{formatDate(row.deadline)}</span> : <span className="text-muted">—</span>,
     },
-    { header: 'Created By', accessorKey: 'creatorName' },
     {
-      header: 'Created At',
-      cell: (row) => <span>{formatDate(row.createdAt)}</span>,
+      header: 'Created by',
+      cell: (row) => <span className="text-secondary">{row.creatorName ?? '—'}</span>,
+    },
+    {
+      header: 'Created',
+      cell: (row) => <span className="text-secondary">{formatDate(row.createdAt)}</span>,
     },
   ];
 
@@ -60,22 +54,20 @@ export default function RFQsPage() {
     },
   ];
 
-  const handleRowClick = (row: any) => {
-    navigate(`/rfqs/${row.id}`);
-  };
-
-  const showCreateBtn = isProcurementOfficer || isAdmin;
+  const showCreate = isProcurementOfficer || isAdmin;
 
   return (
     <div>
       <PageHeader
-        title="Request for Quotations"
-        breadcrumbs={[{ label: 'Procurement', href: '#' }, { label: 'RFQs' }]}
+        title="Requests for quotation"
+        subtitle="Track the lifecycle of every RFQ from draft to award."
+        breadcrumbs={[{ label: 'Procurement' }, { label: 'RFQs' }]}
         action={
-          showCreateBtn ? (
+          showCreate ? (
             <button
+              type="button"
               onClick={() => navigate('/rfqs/new')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-semibold text-sm cursor-pointer flex items-center gap-2"
+              className="btn btn--primary"
             >
               <Plus size={16} />
               New RFQ
@@ -88,14 +80,15 @@ export default function RFQsPage() {
         onSearch={setSearchTerm}
         onFilter={(_, val) => setStatusFilter(val)}
         filters={filterConfigs}
-        placeholder="Search RFQs by title or RFQ number..."
+        placeholder="Search by title or RFQ number"
       />
 
       <DataTable
         columns={columns}
         data={rfqs}
         isLoading={isLoading}
-        onRowClick={handleRowClick}
+        onRowClick={(row) => navigate(`/rfqs/${row.id}`)}
+        emptyMessage="No RFQs match these filters."
       />
     </div>
   );

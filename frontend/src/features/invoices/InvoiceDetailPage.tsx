@@ -37,12 +37,9 @@ export default function InvoiceDetailPage() {
 
   if (!invoice) {
     return (
-      <div className="text-center p-8 bg-surface border border-default rounded-lg">
-        <p className="text-muted">Invoice not found.</p>
-        <button
-          onClick={() => navigate('/invoices')}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded font-semibold text-sm cursor-pointer"
-        >
+      <div className="empty">
+        <p className="empty__title">Invoice not found</p>
+        <button onClick={() => navigate('/invoices')} className="btn btn--primary mt-4">
           Back to Invoices
         </button>
       </div>
@@ -92,8 +89,8 @@ export default function InvoiceDetailPage() {
     updateStatusMutation.mutate({ id, status });
   };
 
-  const canApprove = (isProcurementOfficer || isAdmin) && invoice.status === InvoiceStatus.SUBMITTED;
-  const canPay = (isProcurementOfficer || isAdmin) && invoice.status === InvoiceStatus.APPROVED;
+  const canApprove = (isProcurementOfficer || isAdmin) && invoice.status === InvoiceStatus.DRAFT;
+  const canPay = (isProcurementOfficer || isAdmin) && invoice.status === InvoiceStatus.SENT;
 
   return (
     <div>
@@ -106,7 +103,7 @@ export default function InvoiceDetailPage() {
         action={
           <button
             onClick={() => navigate('/invoices')}
-            className="px-4 py-2 border border-default rounded-md text-sm font-semibold text-primary hover:bg-primary-light flex items-center gap-2 cursor-pointer"
+            className="btn btn--secondary flex items-center gap-2"
           >
             <ArrowLeft size={16} />
             Back
@@ -116,7 +113,8 @@ export default function InvoiceDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         {/* Document Action Control Board */}
-        <div className="lg:col-span-1 bg-surface border border-default rounded-lg p-5 shadow-sm space-y-4">
+        <div className="card lg:col-span-1">
+          <div className="card__body space-y-4">
           <h3 className="text-xs font-bold text-muted uppercase tracking-wider pb-2 border-b border-default">
             Invoice Console
           </h3>
@@ -141,21 +139,21 @@ export default function InvoiceDetailPage() {
           <div className="space-y-2 pt-4 border-t border-default flex flex-col">
             <button
               onClick={handlePrint}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+              className="btn btn--primary btn--block btn--sm uppercase tracking-wider"
             >
               <Printer size={14} />
               Print Invoice
             </button>
             <button
               onClick={handleDownloadPDF}
-              className="w-full bg-black hover:bg-slate-900 text-white py-2 rounded-md font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 border border-default cursor-pointer"
+              className="btn btn--secondary btn--block btn--sm uppercase tracking-wider"
             >
               <Download size={14} />
               Download PDF
             </button>
             <button
               onClick={handleOpenEmailModal}
-              className="w-full bg-black hover:bg-slate-900 text-white py-2 rounded-md font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 border border-default cursor-pointer"
+              className="btn btn--secondary btn--block btn--sm uppercase tracking-wider"
             >
               <Mail size={14} />
               Email Invoice
@@ -167,17 +165,17 @@ export default function InvoiceDetailPage() {
               <span className="block text-[10px] font-bold text-muted uppercase mb-2">Finance Actions</span>
               {canApprove && (
                 <button
-                  onClick={() => handleUpdateStatus(InvoiceStatus.APPROVED)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                  onClick={() => handleUpdateStatus(InvoiceStatus.SENT)}
+                  className="btn btn--primary btn--block btn--sm uppercase tracking-wider"
                 >
                   <CheckCircle size={14} />
-                  Approve Invoice
+                  Send Invoice
                 </button>
               )}
               {canPay && (
                 <button
                   onClick={() => handleUpdateStatus(InvoiceStatus.PAID)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="btn btn--primary btn--block btn--sm uppercase tracking-wider"
                 >
                   <CreditCard size={14} />
                   Mark as Paid
@@ -185,77 +183,54 @@ export default function InvoiceDetailPage() {
               )}
             </div>
           )}
+          </div>
         </div>
 
-        {/* GST Invoice visual layout view */}
-        <div className="lg:col-span-3 bg-slate-100 dark:bg-black/40 p-4 rounded-lg overflow-y-auto max-h-[800px] border border-default">
+        <div className="lg:col-span-3 bg-muted p-4 rounded-lg overflow-y-auto max-h-[800px] border border-default">
           <div className="bg-white p-2 shadow rounded">
             <InvoicePrintTemplate ref={componentRef} invoice={invoice} />
           </div>
         </div>
       </div>
 
-      {/* Email Invoice Dispatch Dialog */}
       {isEmailModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-surface border border-default rounded-lg shadow-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-default bg-elevated flex justify-between items-center">
-              <h3 className="text-base font-bold text-primary flex items-center gap-1.5">
-                <Mail size={18} className="text-primary" />
-                Dispatch Invoice via Email
+        <div className="modal-backdrop" onClick={() => setIsEmailModalOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal__header">
+              <h3 className="card__title flex items-center gap-2">
+                <Mail size={18} />
+                Dispatch invoice via email
               </h3>
-              <button onClick={() => setIsEmailModalOpen(false)} className="text-muted hover:text-primary cursor-pointer">
+              <button type="button" onClick={() => setIsEmailModalOpen(false)} className="btn btn--ghost btn--sm">
                 <X size={18} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="modal__body space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-primary mb-1">Recipient</label>
-                <input
-                  type="email"
-                  value={invoice.vendorEmail}
-                  readOnly
-                  className="w-full px-3 py-2 text-xs rounded bg-elevated border border-default text-slate-500 outline-none"
-                />
+                <label className="input-label">Recipient</label>
+                <input type="email" value={invoice.vendorEmail} readOnly className="input bg-muted" />
               </div>
-
               <div>
-                <label className="block text-xs font-semibold text-primary mb-1">Subject</label>
-                <input
-                  type="text"
-                  value={emailSubject}
-                  onChange={(e) => setEmailSubject(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded bg-surface border border-default text-primary focus:outline-none focus:border-primary"
-                />
+                <label className="input-label">Subject</label>
+                <input type="text" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} className="input" />
               </div>
-
               <div>
-                <label className="block text-xs font-semibold text-primary mb-1">Email Message</label>
-                <textarea
-                  value={emailMessage}
-                  onChange={(e) => setEmailMessage(e.target.value)}
-                  rows={6}
-                  className="w-full px-3 py-2 text-xs rounded bg-surface border border-default text-primary focus:outline-none resize-none"
-                />
+                <label className="input-label">Email message</label>
+                <textarea value={emailMessage} onChange={(e) => setEmailMessage(e.target.value)} rows={6} className="input resize-none" />
               </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-default">
-                <button
-                  type="button"
-                  onClick={() => setIsEmailModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold rounded border border-default text-primary hover:bg-primary-light cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSendEmail}
-                  disabled={sendEmailMutation.isPending}
-                  className="px-4 py-2 text-xs font-semibold rounded bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
-                >
-                  {sendEmailMutation.isPending ? 'Sending...' : 'Send Email'}
-                </button>
-              </div>
+            </div>
+            <div className="modal__footer">
+              <button type="button" onClick={() => setIsEmailModalOpen(false)} className="btn btn--secondary btn--sm">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendEmail}
+                disabled={sendEmailMutation.isPending}
+                className="btn btn--primary btn--sm"
+              >
+                {sendEmailMutation.isPending ? 'Sending…' : 'Send email'}
+              </button>
             </div>
           </div>
         </div>

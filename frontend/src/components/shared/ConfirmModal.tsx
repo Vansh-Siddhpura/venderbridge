@@ -1,5 +1,4 @@
-
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 
 interface ConfirmModalProps {
   open: boolean;
@@ -22,42 +21,37 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   if (!open) return null;
 
-  const confirmBtnClass =
-    variant === 'danger'
-      ? 'bg-black text-white hover:bg-slate-900 border border-black focus:ring-slate-900 dark:bg-slate-900 dark:hover:bg-slate-800'
-      : 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500';
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-surface border border-default rounded-lg shadow-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div className="p-6">
-          <div className="flex items-start gap-4">
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal__header">
+          <div className="flex items-center gap-3">
             {variant === 'danger' && (
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900 text-black dark:text-slate-200">
-                <AlertTriangle size={20} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-error-bg)] text-[var(--color-error)]">
+                <AlertTriangle size={16} />
               </div>
             )}
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-primary mb-2">
-                {title}
-              </h3>
-              <p className="text-sm text-muted">
-                {message}
-              </p>
-            </div>
+            <h3 className="text-base font-semibold text-primary">{title}</h3>
           </div>
-        </div>
-        <div className="bg-elevated px-6 py-4 flex items-center justify-end gap-3 border-t border-default">
           <button
             type="button"
-            className="px-4 py-2 text-sm font-semibold rounded-md border border-default text-primary hover:bg-primary-light transition-colors cursor-pointer"
             onClick={onClose}
+            className="app-shell__icon-btn"
+            aria-label="Close"
           >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="modal__body">
+          <p className="text-sm text-secondary">{message}</p>
+        </div>
+        <div className="modal__footer">
+          <button type="button" className="btn btn--secondary btn--sm" onClick={onClose}>
             Cancel
           </button>
           <button
             type="button"
-            className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors cursor-pointer ${confirmBtnClass}`}
+            className={`btn btn--sm ${variant === 'danger' ? 'btn--danger' : 'btn--primary'}`}
             onClick={() => {
               onConfirm();
               onClose();

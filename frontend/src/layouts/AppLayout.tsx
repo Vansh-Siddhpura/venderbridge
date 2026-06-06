@@ -17,8 +17,9 @@ import {
   ChevronLeft,
   Sun,
   Moon,
+  Users,
 } from 'lucide-react';
-import type { UserRole } from '@/types/enums';
+import { UserRole } from '@/types/enums';
 
 interface NavItem {
   label: string;
@@ -27,51 +28,49 @@ interface NavItem {
   allowedRoles?: UserRole[];
 }
 
-const navItems: NavItem[] = [
+interface NavGroup {
+  label?: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
   {
-    label: 'Dashboard',
-    path: '/dashboard',
-    icon: <LayoutDashboard size={20} />,
+    items: [
+      { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={18} /> },
+    ],
   },
   {
-    label: 'Vendors',
-    path: '/vendors',
-    icon: <Building2 size={20} />,
+    label: 'Procurement',
+    items: [
+      { label: 'Vendors', path: '/vendors', icon: <Building2 size={18} />, allowedRoles: [UserRole.ADMIN, UserRole.PROCUREMENT_OFFICER] },
+      { label: 'RFQs', path: '/rfqs', icon: <FileText size={18} /> },
+      { label: 'Approvals', path: '/approvals', icon: <CheckSquare size={18} />, allowedRoles: [UserRole.ADMIN, UserRole.MANAGER] },
+      { label: 'Purchase Orders', path: '/purchase-orders', icon: <ShoppingCart size={18} /> },
+      { label: 'Invoices', path: '/invoices', icon: <Receipt size={18} /> },
+    ],
   },
   {
-    label: 'RFQs',
-    path: '/rfqs',
-    icon: <FileText size={20} />,
+    label: 'Insights',
+    items: [
+      { label: 'Reports', path: '/reports', icon: <BarChart3 size={18} />, allowedRoles: [UserRole.ADMIN, UserRole.MANAGER] },
+      { label: 'Activity Logs', path: '/activity-logs', icon: <Activity size={18} />, allowedRoles: [UserRole.ADMIN, UserRole.MANAGER] },
+    ],
   },
   {
-    label: 'Approvals',
-    path: '/approvals',
-    icon: <CheckSquare size={20} />,
-    allowedRoles: ['ADMIN' as UserRole, 'MANAGER' as UserRole],
-  },
-  {
-    label: 'Purchase Orders',
-    path: '/purchase-orders',
-    icon: <ShoppingCart size={20} />,
-  },
-  {
-    label: 'Invoices',
-    path: '/invoices',
-    icon: <Receipt size={20} />,
-  },
-  {
-    label: 'Activity Logs',
-    path: '/activity-logs',
-    icon: <Activity size={20} />,
-    allowedRoles: ['ADMIN' as UserRole, 'MANAGER' as UserRole],
-  },
-  {
-    label: 'Reports',
-    path: '/reports',
-    icon: <BarChart3 size={20} />,
-    allowedRoles: ['ADMIN' as UserRole, 'MANAGER' as UserRole],
+    label: 'Administration',
+    items: [
+      { label: 'Users', path: '/admin/users', icon: <Users size={18} />, allowedRoles: [UserRole.ADMIN] },
+    ],
   },
 ];
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Administrator',
+  MANAGER: 'Manager',
+  PROCUREMENT_OFFICER: 'Procurement Officer',
+  VENDOR: 'Vendor',
+  VIEWER: 'Viewer',
+};
 
 export default function AppLayout() {
   const { user, logout } = useAuth();
@@ -85,117 +84,131 @@ export default function AppLayout() {
     navigate('/login');
   };
 
-  const filteredNavItems = navItems.filter((item) => {
+  const isAllowed = (item: NavItem): boolean => {
     if (!item.allowedRoles) return true;
-    return user?.role && item.allowedRoles.includes(user.role as UserRole);
-  });
+    return !!user?.role && item.allowedRoles.includes(user.role as UserRole);
+  };
+
+  const visibleGroups = NAV_GROUPS
+    .map((g) => ({ ...g, items: g.items.filter(isAllowed) }))
+    .filter((g) => g.items.length > 0);
 
   const userInitials = user
-    ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase()
+    ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'
     : 'U';
 
   return (
-    <div className="app-layout">
-      {/* Mobile overlay */}
+    <div className="app-shell">
       {mobileOpen && (
         <div
-          className="app-layout__overlay"
+          className="app-shell__overlay"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
       <aside
-        className={`app-layout__sidebar ${sidebarOpen ? '' : 'app-layout__sidebar--collapsed'} ${mobileOpen ? 'app-layout__sidebar--mobile-open' : ''}`}
+        className={[
+          'app-shell__sidebar',
+          !sidebarOpen ? 'app-shell__sidebar--collapsed' : '',
+          mobileOpen ? 'app-shell__sidebar--mobile-open' : '',
+        ].filter(Boolean).join(' ')}
       >
-        <div className="app-layout__sidebar-header">
-          <div className="app-layout__logo">
-            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-              <rect width="32" height="32" rx="8" fill="url(#sidebar-gradient)" />
-              <path d="M8 22L16 10L24 22H8Z" fill="white" fillOpacity="0.9" />
-              <defs>
-                <linearGradient id="sidebar-gradient" x1="0" y1="0" x2="32" y2="32">
-                  <stop stopColor="var(--color-primary)" />
-                  <stop offset="1" stopColor="#a855f7" />
-                </linearGradient>
-              </defs>
-            </svg>
-            {sidebarOpen && <span className="app-layout__brand">VendorBridge</span>}
+        <div className="app-shell__sidebar-header">
+          <div className="app-shell__brand">
+            <span className="app-shell__brand-mark" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
+                <path d="M6 24L16 8L26 24H6Z" fill="currentColor" />
+              </svg>
+            </span>
+            {sidebarOpen && <span>VendorBridge</span>}
           </div>
           <button
-            className="app-layout__collapse-btn desktop-only"
+            type="button"
+            className="app-shell__icon-btn desktop-only"
             onClick={() => setSidebarOpen(!sidebarOpen)}
+            title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           >
             <ChevronLeft
-              size={18}
-              style={{
-                transform: sidebarOpen ? 'none' : 'rotate(180deg)',
-                transition: 'transform 0.2s',
-              }}
+              size={16}
+              style={{ transform: sidebarOpen ? 'none' : 'rotate(180deg)', transition: 'transform 200ms' }}
             />
           </button>
         </div>
 
-        <nav className="app-layout__nav">
-          {filteredNavItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `app-layout__nav-link ${isActive ? 'app-layout__nav-link--active' : ''}`
-              }
-              onClick={() => setMobileOpen(false)}
-              title={!sidebarOpen ? item.label : undefined}
-            >
-              <span className="app-layout__nav-icon">{item.icon}</span>
-              {sidebarOpen && <span className="app-layout__nav-label">{item.label}</span>}
-            </NavLink>
+        <nav className="app-shell__nav">
+          {visibleGroups.map((group, idx) => (
+            <div key={idx}>
+              {group.label && sidebarOpen && (
+                <div className="app-shell__nav-group-label">{group.label}</div>
+              )}
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `app-shell__nav-link ${isActive ? 'app-shell__nav-link--active' : ''}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title={!sidebarOpen ? item.label : undefined}
+                >
+                  <span className="flex-shrink-0">{item.icon}</span>
+                  {sidebarOpen && <span>{item.label}</span>}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
-        <div className="app-layout__sidebar-footer">
-          <button className="app-layout__logout-btn" onClick={handleLogout}>
-            <LogOut size={20} />
-            {sidebarOpen && <span>Logout</span>}
+        <div className="app-shell__sidebar-footer">
+          <button
+            type="button"
+            className="app-shell__nav-link w-full"
+            onClick={handleLogout}
+            title={!sidebarOpen ? 'Sign out' : undefined}
+          >
+            <LogOut size={18} />
+            {sidebarOpen && <span>Sign out</span>}
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
-      <div className={`app-layout__main ${sidebarOpen ? '' : 'app-layout__main--expanded'}`}>
-        {/* Topbar */}
-        <header className="app-layout__topbar">
+      <div className="app-shell__main">
+        <header className="app-shell__topbar">
           <button
-            className="app-layout__mobile-toggle mobile-only"
+            type="button"
+            className="app-shell__icon-btn mobile-only"
             onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
           >
-            {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          <div className="app-layout__topbar-spacer" />
+          <div className="flex-1" />
 
-          {/* Theme Toggle Button */}
           <button
+            type="button"
             onClick={toggleTheme}
-            className="p-2 rounded-lg border border-default hover:bg-primary-light text-muted transition-colors mr-2 cursor-pointer flex items-center justify-center"
-            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            className="app-shell__icon-btn"
+            title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            aria-label="Toggle theme"
           >
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
 
-          <div className="app-layout__user-info">
-            <div className="app-layout__avatar">{userInitials}</div>
-            <div className="app-layout__user-details desktop-only">
-              <span className="app-layout__user-name">
+          <div className="flex items-center gap-3 pl-3 border-l border-default">
+            <div className="app-shell__avatar">{userInitials}</div>
+            <div className="hidden md:flex flex-col leading-tight">
+              <span className="text-sm font-semibold text-primary">
                 {user?.firstName} {user?.lastName}
               </span>
-              <span className="app-layout__user-role">{user?.role?.replace('_', ' ')}</span>
+              <span className="text-xs text-muted">
+                {ROLE_LABELS[user?.role ?? ''] ?? user?.role}
+              </span>
             </div>
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="app-layout__content">
+        <main className="app-shell__content">
           <Outlet />
         </main>
       </div>

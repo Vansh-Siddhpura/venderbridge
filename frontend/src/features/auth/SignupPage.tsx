@@ -10,7 +10,7 @@ const signupSchema = z.object({
   firstName: z.string().min(2, 'First name is required'),
   lastName: z.string().min(2, 'Last name is required'),
   email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(8, 'Use at least 8 characters'),
 });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -29,110 +29,99 @@ export default function SignupPage() {
 
   const onSubmit = async (_data: SignupFormValues) => {
     setIsLoading(true);
-    // Simulate user creation
     setTimeout(() => {
       setIsLoading(false);
-      toast.success('Registration successful! Please login with your credentials.');
+      toast.success('Account request received. An administrator will contact you shortly.');
       navigate('/login');
     }, 600);
   };
 
   return (
-    <div className="auth-layout__card w-full">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-black text-primary tracking-tight">Create Account</h2>
-        <p className="text-xs text-muted mt-1">Join VendorBridge ERP Procurement System</p>
+    <div className="auth-card">
+      <div className="mb-8 text-center">
+        <h1 className="text-2xl font-bold tracking-tight text-primary">Request an account</h1>
+        <p className="mt-2 text-sm text-muted">
+          Tell us a bit about yourself and we&apos;ll set you up.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Name Fields */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-primary mb-1">First Name</label>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
-                <User size={16} />
-              </span>
+            <label className="input-label" htmlFor="firstName">First name</label>
+            <div className="input-group">
+              <span className="input-group__icon"><User size={16} /></span>
               <input
+                id="firstName"
                 type="text"
                 {...register('firstName')}
                 placeholder="Ananya"
-                className="w-full pl-9 pr-3 py-2 text-sm rounded-md bg-surface border border-default text-primary focus:outline-none focus:border-primary"
+                className="input input--with-icon"
               />
             </div>
-            {errors.firstName && (
-              <p className="text-[10px] text-red-500 font-semibold mt-1">{errors.firstName.message}</p>
-            )}
+            {errors.firstName && <span className="input-error">{errors.firstName.message}</span>}
           </div>
           <div>
-            <label className="block text-xs font-semibold text-primary mb-1">Last Name</label>
+            <label className="input-label" htmlFor="lastName">Last name</label>
             <input
+              id="lastName"
               type="text"
               {...register('lastName')}
               placeholder="Sharma"
-              className="w-full px-3 py-2 text-sm rounded-md bg-surface border border-default text-primary focus:outline-none focus:border-primary"
+              className="input"
             />
-            {errors.lastName && (
-              <p className="text-[10px] text-red-500 font-semibold mt-1">{errors.lastName.message}</p>
-            )}
+            {errors.lastName && <span className="input-error">{errors.lastName.message}</span>}
           </div>
         </div>
 
-        {/* Email Field */}
         <div>
-          <label className="block text-xs font-semibold text-primary mb-1">Email Address</label>
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
-              <Mail size={16} />
-            </span>
+          <label className="input-label" htmlFor="email">Work email</label>
+          <div className="input-group">
+            <span className="input-group__icon"><Mail size={16} /></span>
             <input
+              id="email"
               type="email"
+              autoComplete="email"
               {...register('email')}
-              placeholder="name@company.com"
-              className="w-full pl-10 pr-3 py-2 text-sm rounded-md bg-surface border border-default text-primary focus:outline-none focus:border-primary"
+              placeholder="you@company.com"
+              className="input input--with-icon"
             />
           </div>
-          {errors.email && (
-            <p className="text-[10px] text-red-500 font-semibold mt-1">{errors.email.message}</p>
-          )}
+          {errors.email && <span className="input-error">{errors.email.message}</span>}
         </div>
 
-        {/* Password Field */}
         <div>
-          <label className="block text-xs font-semibold text-primary mb-1">Password</label>
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
-              <Lock size={16} />
-            </span>
+          <label className="input-label" htmlFor="password">Password</label>
+          <div className="input-group">
+            <span className="input-group__icon"><Lock size={16} /></span>
             <input
+              id="password"
               type="password"
+              autoComplete="new-password"
               {...register('password')}
-              placeholder="••••••••"
-              className="w-full pl-10 pr-3 py-2 text-sm rounded-md bg-surface border border-default text-primary focus:outline-none focus:border-primary"
+              placeholder="At least 8 characters"
+              className="input input--with-icon"
             />
           </div>
-          {errors.password && (
-            <p className="text-[10px] text-red-500 font-semibold mt-1">{errors.password.message}</p>
-          )}
+          {errors.password && <span className="input-error">{errors.password.message}</span>}
         </div>
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-blue-600 text-white py-2 rounded-md font-semibold text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors cursor-pointer flex items-center justify-center gap-1 group"
+          className="btn btn--primary btn--block"
         >
-          {isLoading ? 'Creating Account...' : 'Create Account'}
-          <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+          {isLoading ? 'Submitting…' : 'Request account'}
+          {!isLoading && <ArrowRight size={16} />}
         </button>
       </form>
 
-      <div className="text-center mt-6 text-xs text-muted font-medium">
+      <p className="mt-6 text-center text-sm text-muted">
         Already have an account?{' '}
-        <Link to="/login" className="text-primary hover:underline font-bold">
-          Sign in here
+        <Link to="/login" className="font-semibold text-brand hover:underline">
+          Sign in
         </Link>
-      </div>
+      </p>
     </div>
   );
 }

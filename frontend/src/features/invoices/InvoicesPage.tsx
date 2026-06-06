@@ -16,33 +16,28 @@ export default function InvoicesPage() {
 
   const columns: ColumnDef[] = [
     {
-      header: 'Invoice Number',
+      header: 'Invoice',
       cell: (row) => (
-        <span className="font-bold text-slate-900 dark:text-slate-100">
-          {row.invoiceNumber}
-        </span>
+        <div>
+          <div className="font-medium text-primary">{row.invoiceNumber}</div>
+          <div className="text-xs text-muted">{row.vendorName ?? '—'}</div>
+        </div>
       ),
     },
-    { header: 'Vendor Name', accessorKey: 'vendorName' },
     {
-      header: 'PO Reference',
-      cell: (row) => <span className="font-semibold text-slate-800 dark:text-slate-200">{row.poNumber}</span>,
+      header: 'PO reference',
+      cell: (row) => row.poNumber ? <span className="text-secondary">{row.poNumber}</span> : <span className="text-muted">—</span>,
     },
     {
-      header: 'Total Value',
-      cell: (row) => <span className="font-semibold">{formatCurrency(row.totalAmount)}</span>,
+      header: 'Amount',
+      align: 'right',
+      cell: (row) => <span className="font-medium tabular-nums">{formatCurrency(row.totalAmount)}</span>,
     },
+    { header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
     {
-      header: 'Status',
-      cell: (row) => <StatusBadge status={row.status} />,
-    },
-    {
-      header: 'Due Date',
-      cell: (row) => <span>{formatDate(row.dueDate)}</span>,
-    },
-    {
-      header: 'Created At',
-      cell: (row) => <span>{formatDate(row.createdAt)}</span>,
+      header: 'Due date',
+      cell: (row) =>
+        row.dueDate ? <span className="text-secondary">{formatDate(row.dueDate)}</span> : <span className="text-muted">—</span>,
     },
   ];
 
@@ -54,29 +49,27 @@ export default function InvoicesPage() {
     },
   ];
 
-  const handleRowClick = (row: any) => {
-    navigate(`/invoices/${row.id}`);
-  };
-
   return (
     <div>
       <PageHeader
-        title="Invoices Ledger"
-        breadcrumbs={[{ label: 'Procurement', href: '#' }, { label: 'Invoices' }]}
+        title="Invoices"
+        subtitle="Monitor billing status and outstanding balances."
+        breadcrumbs={[{ label: 'Procurement' }, { label: 'Invoices' }]}
       />
 
       <SearchFilter
-        onSearch={() => {}} // Search placeholder
+        onSearch={() => {}}
         onFilter={(_, val) => setStatusFilter(val)}
         filters={filterConfigs}
-        placeholder="Search invoices..."
+        placeholder="Search invoices"
       />
 
       <DataTable
         columns={columns}
         data={invoices}
         isLoading={isLoading}
-        onRowClick={handleRowClick}
+        onRowClick={(row) => navigate(`/invoices/${row.id}`)}
+        emptyMessage="No invoices yet."
       />
     </div>
   );

@@ -29,12 +29,9 @@ export default function PODetailPage() {
 
   if (!po) {
     return (
-      <div className="text-center p-8 bg-surface border border-default rounded-lg">
-        <p className="text-muted">Purchase Order not found.</p>
-        <button
-          onClick={() => navigate('/purchase-orders')}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded font-semibold text-sm cursor-pointer"
-        >
+      <div className="empty">
+        <p className="empty__title">Purchase order not found</p>
+        <button onClick={() => navigate('/purchase-orders')} className="btn btn--primary mt-4">
           Back to POs
         </button>
       </div>
@@ -58,13 +55,13 @@ export default function PODetailPage() {
   };
 
   // Status-based permissions
-  const canAcknowledge = isVendor && po.status === POStatus.ISSUED;
+  const canAcknowledge = isVendor && po.status === POStatus.PENDING;
   const canMarkDelivered = isVendor && po.status === POStatus.ACKNOWLEDGED;
-  
-  // Invoice can be generated when PO is Acknowledged or Delivered
+
+  // Invoice can be generated when PO is Acknowledged or Fulfilled
   const canGenerateInvoice =
     (isVendor || user?.role === 'PROCUREMENT_OFFICER' || user?.role === 'ADMIN') &&
-    (po.status === POStatus.ACKNOWLEDGED || po.status === POStatus.DELIVERED);
+    (po.status === POStatus.ACKNOWLEDGED || po.status === POStatus.FULFILLED);
 
   // Calculate tax breakdown (assuming a default GST of 18% for mock calculation)
   const gstRate = 18;
@@ -82,7 +79,7 @@ export default function PODetailPage() {
         action={
           <button
             onClick={() => navigate('/purchase-orders')}
-            className="px-4 py-2 border border-default rounded-md text-sm font-semibold text-primary hover:bg-primary-light flex items-center gap-2 cursor-pointer"
+            className="btn btn--secondary flex items-center gap-2"
           >
             <ArrowLeft size={16} />
             Back
@@ -92,7 +89,8 @@ export default function PODetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Core details */}
-        <div className="lg:col-span-2 bg-surface border border-default rounded-lg p-6 shadow-sm space-y-6">
+        <div className="card lg:col-span-2">
+          <div className="card__body space-y-6">
           <div className="flex justify-between items-start pb-4 border-b border-default">
             <div>
               <span className="text-xs font-semibold text-muted uppercase tracking-wider block">
@@ -183,10 +181,12 @@ export default function PODetailPage() {
               </div>
             </div>
           </div>
+          </div>
         </div>
 
         {/* Action Panel */}
-        <div className="bg-surface border border-default rounded-lg p-6 shadow-sm h-fit space-y-4">
+        <div className="card h-fit">
+          <div className="card__body space-y-4">
           <h3 className="text-sm font-bold text-muted uppercase tracking-wider pb-2 border-b border-default">
             Vendor Actions
           </h3>
@@ -201,7 +201,7 @@ export default function PODetailPage() {
             {canAcknowledge && (
               <button
                 onClick={() => handleUpdateStatus(POStatus.ACKNOWLEDGED)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                className="btn btn--primary btn--block btn--sm uppercase tracking-wider"
               >
                 <CheckCircle size={14} />
                 Acknowledge PO
@@ -210,73 +210,65 @@ export default function PODetailPage() {
 
             {canMarkDelivered && (
               <button
-                onClick={() => handleUpdateStatus(POStatus.DELIVERED)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                onClick={() => handleUpdateStatus(POStatus.FULFILLED)}
+                className="btn btn--primary btn--block btn--sm uppercase tracking-wider"
               >
                 <Truck size={14} />
-                Mark as Delivered
+                Mark as Fulfilled
               </button>
             )}
 
             {canGenerateInvoice && (
               <button
                 onClick={() => setIsInvoiceModalOpen(true)}
-                className="w-full bg-black hover:bg-slate-900 text-white py-2 rounded-md font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                className="btn btn--secondary btn--block btn--sm uppercase tracking-wider"
               >
                 <Receipt size={14} />
                 Generate Tax Invoice
               </button>
             )}
           </div>
+          </div>
         </div>
       </div>
 
-      {/* Generate Invoice Modal Dialog */}
       {isInvoiceModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-surface border border-default rounded-lg shadow-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-default bg-elevated">
-              <h3 className="text-base font-bold text-primary flex items-center gap-1.5">
-                <Receipt size={18} className="text-primary" />
+        <div className="modal-backdrop" onClick={() => setIsInvoiceModalOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal__header">
+              <h3 className="card__title flex items-center gap-2">
+                <Receipt size={18} />
                 Generate Invoice
               </h3>
             </div>
-            <div className="p-6 space-y-4">
-              <p className="text-xs text-muted leading-relaxed">
+            <div className="modal__body space-y-4">
+              <p className="text-sm text-muted">
                 Generate a tax invoice for PO <strong>{po.poNumber}</strong> with a total amount of{' '}
                 <strong>{formatCurrency(po.totalAmount)}</strong>.
               </p>
-
               <div>
-                <label className="block text-xs font-semibold text-primary mb-1">
-                  Billing Terms / Notes for Buyer
-                </label>
+                <label className="input-label">Billing terms / notes for buyer</label>
                 <textarea
                   value={invoiceNotes}
                   onChange={(e) => setInvoiceNotes(e.target.value)}
                   rows={3}
                   placeholder="Provide payment details or bank information..."
-                  className="w-full px-3 py-2 text-xs rounded bg-surface border border-default text-primary focus:outline-none resize-none"
+                  className="input resize-none"
                 />
               </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-default">
-                <button
-                  type="button"
-                  onClick={() => setIsInvoiceModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold rounded border border-default text-primary hover:bg-primary-light cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCreateInvoice}
-                  disabled={generateInvoiceMutation.isPending}
-                  className="px-4 py-2 text-xs font-semibold rounded bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
-                >
-                  Generate Invoice
-                </button>
-              </div>
+            </div>
+            <div className="modal__footer">
+              <button type="button" onClick={() => setIsInvoiceModalOpen(false)} className="btn btn--secondary btn--sm">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateInvoice}
+                disabled={generateInvoiceMutation.isPending}
+                className="btn btn--primary btn--sm"
+              >
+                {generateInvoiceMutation.isPending ? 'Generating…' : 'Generate Invoice'}
+              </button>
             </div>
           </div>
         </div>

@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { verifyToken, checkRole } from '../../middlewares/auth.middleware';
 import { validateBody, validateQuery } from '../../middlewares/validate.middleware';
 import { UpdateUserSchema, UpdateProfileSchema, ListUsersQuerySchema } from './schema';
+import { RegisterSchema } from '../auth/schema';
 import * as controller from './controller';
+import * as authController from '../auth/controller';
 
 const router = Router();
 
@@ -16,16 +18,13 @@ router.get('/me', controller.getMe);
 router.patch('/me', validateBody(UpdateProfileSchema), controller.updateProfile);
 
 // Admin-only routes below
-// GET /api/users
 router.get('/', checkRole('ADMIN'), validateQuery(ListUsersQuerySchema), controller.listUsers);
 
-// GET /api/users/:id
+// Create a new internal user (admin only) — delegates to auth.register
+router.post('/', checkRole('ADMIN'), validateBody(RegisterSchema), authController.register);
+
 router.get('/:id', checkRole('ADMIN'), controller.getUser);
-
-// PUT /api/users/:id
 router.put('/:id', validateBody(UpdateUserSchema), controller.updateUser);
-
-// DELETE /api/users/:id
 router.delete('/:id', checkRole('ADMIN'), controller.deleteUser);
 
 export default router;

@@ -15,7 +15,6 @@ import type {
 
 // ── Vendors ───────────────────────────────────────────────────────────────────
 
-/** Lists vendors with pagination, search, and status filter. */
 export const listVendors = async (query: ListVendorsQuery) => {
   const { page, limit, skip, sortBy, sortOrder } = getPaginationParams(query);
   const { vendors, total } = await repo.findVendors({
@@ -30,17 +29,12 @@ export const listVendors = async (query: ListVendorsQuery) => {
   return { vendors, total, page, limit };
 };
 
-/** Gets a single vendor by ID. @throws NOT_FOUND */
 export const getVendor = async (id: string) => {
   const vendor = await repo.findVendorById(id);
   if (!vendor) throw new AppError(ERROR_CODES.NOT_FOUND, 'Vendor not found', 404);
   return vendor;
 };
 
-/**
- * Creates a new vendor (admin flow — without creating a user account).
- * @throws CONFLICT if email already taken
- */
 export const createVendor = async (input: CreateVendorInput, userId: string, ip: string) => {
   const existing = await repo.findVendorByEmail(input.email);
   if (existing) throw new AppError(ERROR_CODES.CONFLICT, 'Vendor email already exists', 409);
@@ -62,16 +56,13 @@ export const createVendor = async (input: CreateVendorInput, userId: string, ip:
   );
 };
 
-/**
- * Updates vendor profile. Vendors can only update their own profile.
- * @throws FORBIDDEN if vendor tries to update another vendor
- */
 export const updateVendor = async (
   id: string,
   input: UpdateVendorInput,
   requesterId: string,
   requesterRole: UserRole,
-  requesterVendorId?: string
+  requesterVendorId: string | undefined,
+  ip: string
 ) => {
   const vendor = await repo.findVendorById(id);
   if (!vendor) throw new AppError(ERROR_CODES.NOT_FOUND, 'Vendor not found', 404);
@@ -100,17 +91,11 @@ export const updateVendor = async (
   );
 };
 
-const ip = 'system';
-
-/**
- * Updates vendor status. Admin only.
- * Sends approval email when status changes to APPROVED.
- */
 export const updateVendorStatus = async (
   id: string,
   input: UpdateVendorStatusInput,
   userId: string,
-  clientIp: string
+  ip: string
 ) => {
   const vendor = await repo.findVendorById(id);
   if (!vendor) throw new AppError(ERROR_CODES.NOT_FOUND, 'Vendor not found', 404);
@@ -120,10 +105,9 @@ export const updateVendorStatus = async (
     input.status as VendorStatus,
     input.notes,
     userId,
-    clientIp
+    ip
   );
 
-  // Send email notification when approved
   if (input.status === 'APPROVED') {
     const frontendUrl = process.env.CORS_ORIGIN ?? 'http://localhost:5173';
     await sendVendorApprovedEmail(vendor.email, vendor.companyName, frontendUrl).catch(() => {});

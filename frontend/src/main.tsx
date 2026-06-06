@@ -30,22 +30,24 @@ createRoot(document.getElementById('root')!).render(
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#040814',
-              color: '#93c5fd',
-              border: '1px solid rgba(59, 130, 246, 0.2)',
-              borderRadius: '12px',
+              background: 'var(--bg-surface)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-default)',
+              borderRadius: '10px',
               fontSize: '14px',
+              padding: '10px 14px',
+              boxShadow: '0 4px 12px rgba(15, 23, 42, 0.08)',
             },
             success: {
               iconTheme: {
-                primary: '#3b82f6',
-                secondary: '#040814',
+                primary: '#16a34a',
+                secondary: '#ffffff',
               },
             },
             error: {
               iconTheme: {
-                primary: '#ef4444',
-                secondary: '#040814',
+                primary: '#dc2626',
+                secondary: '#ffffff',
               },
             },
           }}

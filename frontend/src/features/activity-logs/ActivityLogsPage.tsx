@@ -4,6 +4,15 @@ import { useActivityLogsQuery } from './hooks/useActivityLogs';
 import { PageHeader, Timeline, SearchFilter } from '@/components/shared';
 import { Activity, FileText, ShoppingCart, Receipt, Building2 } from 'lucide-react';
 
+const ENTITY_LABELS: Record<string, string> = {
+  rfq: 'RFQ',
+  quotation: 'Quotation',
+  po: 'Purchase order',
+  invoice: 'Invoice',
+  vendor: 'Vendor',
+  user: 'User',
+};
+
 export default function ActivityLogsPage() {
   const [entityFilter, setEntityFilter] = useState('');
   const [userSearch, setUserSearch] = useState('');
@@ -16,106 +25,99 @@ export default function ActivityLogsPage() {
   const filterConfigs = [
     {
       key: 'entity',
-      label: 'Entity Type',
-      options: [
-        { label: 'RFQ', value: 'RFQ' },
-        { label: 'Quotation', value: 'Quotation' },
-        { label: 'Purchase Order', value: 'PurchaseOrder' },
-        { label: 'Invoice', value: 'Invoice' },
-        { label: 'Vendor', value: 'Vendor' },
-        { label: 'User', value: 'User' },
-      ],
+      label: 'Entity',
+      options: Object.entries(ENTITY_LABELS).map(([value, label]) => ({ label, value })),
     },
   ];
 
-  // Helper to map entity links
-  const getEntityUrl = (entity: string, entityId: string) => {
+  const getEntityUrl = (entity: string, entityId?: string) => {
+    if (!entityId) return null;
     switch (entity) {
-      case 'RFQ':
-        return `/rfqs/${entityId}`;
-      case 'Quotation':
-        // Quotation link points to the RFQ comparison page
-        return `/rfqs/${entityId}/quotations`;
-      case 'PurchaseOrder':
-        return `/purchase-orders/${entityId}`;
-      case 'Invoice':
-        return `/invoices/${entityId}`;
-      case 'Vendor':
-        return `/vendors/${entityId}`;
-      case 'User':
-        return `/admin/users`;
-      default:
-        return '#';
+      case 'rfq': return `/rfqs/${entityId}`;
+      case 'quotation': return `/rfqs/${entityId}/quotations`;
+      case 'po': return `/purchase-orders/${entityId}`;
+      case 'invoice': return `/invoices/${entityId}`;
+      case 'vendor': return `/vendors/${entityId}`;
+      case 'user': return `/admin/users`;
+      default: return null;
     }
   };
 
-  // Helper to map entity icons
   const getEntityIcon = (entity: string) => {
     switch (entity) {
-      case 'RFQ':
-        return <FileText size={10} />;
-      case 'PurchaseOrder':
-        return <ShoppingCart size={10} />;
-      case 'Invoice':
-        return <Receipt size={10} />;
-      case 'Vendor':
-        return <Building2 size={10} />;
-      default:
-        return <Activity size={10} />;
+      case 'rfq': return <FileText size={10} />;
+      case 'po': return <ShoppingCart size={10} />;
+      case 'invoice': return <Receipt size={10} />;
+      case 'vendor': return <Building2 size={10} />;
+      default: return <Activity size={10} />;
     }
   };
 
-  // Format logs for Timeline component
-  const timelineEvents = logs.map((log) => {
-    const linkUrl = log.entityId ? getEntityUrl(log.entity, log.entityId) : null;
-    
+  const timelineEvents = logs.map((log: any) => {
+    const url = getEntityUrl(log.entity, log.entityId);
     return {
       id: log.id,
-      title: log.action,
+      title: humanizeAction(log.action),
       timestamp: log.createdAt,
       user: log.userName,
       icon: getEntityIcon(log.entity),
       description: (
-        <div className="space-y-1">
-          <p className="text-xs text-primary">{log.details}</p>
-          {linkUrl && (
-            <Link
-              to={linkUrl}
-              className="inline-flex items-center text-[10px] font-bold text-blue-500 hover:underline mt-1 uppercase tracking-wider"
-            >
-              View Linked {log.entity.replace(/([A-Z])/g, ' $1').trim()} &rarr;
-            </Link>
+        <div className="space-y-2">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-elevated px-2 py-0.5 text-xs text-secondary">
+            {ENTITY_LABELS[log.entity] ?? log.entity}
+          </span>
+          {url && (
+            <div>
+              <Link
+                to={url}
+                className="text-xs font-medium text-brand hover:underline"
+              >
+                View related {ENTITY_LABELS[log.entity] ?? log.entity} &rarr;
+              </Link>
+            </div>
           )}
         </div>
-      ) as any,
+      ),
     };
   });
 
   return (
     <div>
       <PageHeader
-        title="System Activity Logs"
-        breadcrumbs={[{ label: 'Admin', href: '#' }, { label: 'Activity Logs' }]}
+        title="Activity log"
+        subtitle="Append-only audit trail of every change in the system."
+        breadcrumbs={[{ label: 'Insights' }, { label: 'Activity log' }]}
       />
 
       <SearchFilter
         onSearch={setUserSearch}
         onFilter={(_, val) => setEntityFilter(val)}
         filters={filterConfigs}
-        placeholder="Filter logs by username..."
+        placeholder="Filter by user…"
       />
 
       {isLoading ? (
-        <div className="space-y-4">
-          {Array.from({ length: 4 }).map((_, idx) => (
-            <div key={idx} className="h-16 bg-surface border border-default rounded animate-pulse" />
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, idx) => (
+            <div key={idx} className="card card__body">
+              <div className="skeleton h-4 w-1/3" />
+              <div className="skeleton mt-2 h-3 w-2/3" />
+            </div>
           ))}
         </div>
       ) : (
-        <div className="max-w-3xl">
-          <Timeline events={timelineEvents} />
-        </div>
+        <Timeline events={timelineEvents} />
       )}
     </div>
   );
+}
+
+function humanizeAction(action: string): string {
+  return action
+    .split('.')
+    .slice(1)
+    .join(' ')
+    .replace(/_/g, ' ')
+    .replace(/^./, (m) => m.toUpperCase())
+    || action;
 }
