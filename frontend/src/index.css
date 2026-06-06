@@ -3,31 +3,32 @@
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────────── */
 :root {
-  /* Primary palette */
-  --color-primary: #6366f1;
-  --color-primary-hover: #5558e6;
-  --color-primary-light: rgba(99, 102, 241, 0.1);
+  /* Light Mode (Default) - Black and Blue Shades */
+  --bg-base: #f0f7ff;
+  --bg-surface: #ffffff;
+  --bg-elevated: #e0effe;
+  --bg-card: rgba(255, 255, 255, 0.9);
 
-  /* Background layers */
-  --bg-base: #0f0f1a;
-  --bg-surface: #1a1a2e;
-  --bg-elevated: #222240;
-  --bg-card: rgba(30, 30, 52, 0.8);
+  /* Primary Accent & Hover (Shades of Blue) */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-light: rgba(37, 99, 235, 0.08);
 
-  /* Text */
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  /* Text - Black and Dark Navy/Blue */
+  --text-primary: #000000;
+  --text-secondary: #0f172a;
+  --text-muted: #1e3a8a;
 
-  /* Border */
-  --border-default: rgba(99, 102, 241, 0.12);
-  --border-hover: rgba(99, 102, 241, 0.3);
+  /* Borders - Light Blue */
+  --border-default: #dbeafe;
+  --border-hover: #93c5fd;
 
-  /* Status colors */
-  --status-success: #22c55e;
-  --status-warning: #eab308;
-  --status-error: #ef4444;
-  --status-info: #3b82f6;
+  /* Status badges mapped to different shades of blue and black */
+  --status-success: #1d4ed8; /* Deep Blue */
+  --status-warning: #3b82f6; /* Medium Blue */
+  --status-error: #000000;   /* Black */
+  --status-info: #60a5fa;    /* Light Blue */
+  --status-default: #94a3b8; /* Slate Blue/Gray */
 
   /* Radius */
   --radius-sm: 6px;
@@ -36,10 +37,10 @@
   --radius-xl: 20px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
+  --shadow-sm: 0 1px 3px rgba(37, 99, 235, 0.1);
+  --shadow-md: 0 4px 12px rgba(37, 99, 235, 0.15);
+  --shadow-lg: 0 8px 32px rgba(37, 99, 235, 0.2);
+  --shadow-glow: 0 0 20px rgba(37, 99, 235, 0.1);
 
   /* Sidebar */
   --sidebar-width: 260px;
@@ -50,6 +51,41 @@
   --transition-fast: 150ms ease;
   --transition-default: 250ms ease;
   --transition-slow: 350ms ease;
+}
+
+/* Dark Mode - Black and shades of Blue */
+.dark {
+  --bg-base: #000000; /* Pure Black base background */
+  --bg-surface: #040814; /* Extremely dark blue-black */
+  --bg-elevated: #081026; /* Dark blue elevated */
+  --bg-card: rgba(4, 8, 20, 0.85);
+
+  /* Primary Accent & Hover */
+  --color-primary: #3b82f6; /* Lighter bright blue */
+  --color-primary-hover: #60a5fa;
+  --color-primary-light: rgba(59, 130, 246, 0.15);
+
+  /* Text - Off-white and light blue shades */
+  --text-primary: #f8fafc;
+  --text-secondary: #93c5fd;
+  --text-muted: #60a5fa;
+
+  /* Borders - Subtle Dark Blue */
+  --border-default: rgba(59, 130, 246, 0.15);
+  --border-hover: rgba(59, 130, 246, 0.35);
+
+  /* Status badges mapped to different shades of blue and black/white in dark mode */
+  --status-success: #60a5fa; /* Light Blue */
+  --status-warning: #3b82f6; /* Medium Blue */
+  --status-error: #f8fafc;   /* White/Light gray */
+  --status-info: #93c5fd;    /* Pale Blue */
+  --status-default: #475569; /* Slate */
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.7);
+  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.08);
 }
 
 /* ─── Global Reset & Base ──────────────────────────────────────────────────── */
@@ -82,8 +118,8 @@ body {
   justify-content: center;
   background: var(--bg-base);
   background-image:
-    radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 50%);
+    radial-gradient(ellipse at 20% 50%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(30, 58, 138, 0.06) 0%, transparent 50%);
 }
 
 .auth-layout__container {
@@ -112,7 +148,7 @@ body {
 .auth-layout__title {
   font-size: 24px;
   font-weight: 700;
-  background: linear-gradient(135deg, #6366f1, #a78bfa);
+  background: linear-gradient(135deg, #2563eb, #60a5fa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -169,7 +205,7 @@ body {
 .app-layout__brand {
   font-size: 18px;
   font-weight: 700;
-  background: linear-gradient(135deg, #6366f1, #a78bfa);
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -226,7 +262,7 @@ body {
 }
 
 .app-layout__nav-link--active {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15));
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(59, 130, 246, 0.12));
   color: var(--color-primary);
   box-shadow: inset 3px 0 0 var(--color-primary);
 }
@@ -259,7 +295,7 @@ body {
 
 .app-layout__logout-btn:hover {
   background: rgba(239, 68, 68, 0.1);
-  color: var(--status-error);
+  color: #ef4444;
 }
 
 /* Main content area */
@@ -304,7 +340,7 @@ body {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -339,7 +375,7 @@ body {
   padding: 28px;
   background: var(--bg-base);
   background-image:
-    radial-gradient(ellipse at 80% 80%, rgba(99, 102, 241, 0.03) 0%, transparent 50%);
+    radial-gradient(ellipse at 80% 80%, rgba(37, 99, 235, 0.03) 0%, transparent 50%);
 }
 
 /* ─── Page Placeholder ─────────────────────────────────────────────────────── */
@@ -547,6 +583,28 @@ body {
   overflow: hidden;
 }
 
+/* ─── Invoice Print Template ───────────────────────────────────────────────── */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .invoice-print-area,
+  .invoice-print-area * {
+    visibility: visible !important;
+  }
+  .invoice-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
 /* ─── Utility Classes ──────────────────────────────────────────────────────── */
 .desktop-only {
   display: flex;
@@ -591,10 +649,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(37, 99, 235, 0.2);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.4);
+  background: rgba(37, 99, 235, 0.4);
 }

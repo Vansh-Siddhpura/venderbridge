@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/components/ThemeProvider';
 import {
   LayoutDashboard,
   Building2,
@@ -14,6 +15,8 @@ import {
   Menu,
   X,
   ChevronLeft,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import type { UserRole } from '@/types/enums';
 
@@ -72,6 +75,7 @@ const navItems: NavItem[] = [
 
 export default function AppLayout() {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -111,8 +115,8 @@ export default function AppLayout() {
               <path d="M8 22L16 10L24 22H8Z" fill="white" fillOpacity="0.9" />
               <defs>
                 <linearGradient id="sidebar-gradient" x1="0" y1="0" x2="32" y2="32">
-                  <stop stopColor="#6366f1" />
-                  <stop offset="1" stopColor="#8b5cf6" />
+                  <stop stopColor="#2563eb" />
+                  <stop offset="1" stopColor="#1d4ed8" />
                 </linearGradient>
               </defs>
             </svg>
@@ -169,6 +173,15 @@ export default function AppLayout() {
           </button>
 
           <div className="app-layout__topbar-spacer" />
+
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg border border-default hover:bg-primary-light text-muted transition-colors mr-2 cursor-pointer flex items-center justify-center"
+            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          >
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
 
           <div className="app-layout__user-info">
             <div className="app-layout__avatar">{userInitials}</div>

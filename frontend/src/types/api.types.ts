@@ -36,6 +36,7 @@ export interface User {
   lastName: string;
   role: UserRole;
   isActive: boolean;
+  vendorId?: string;
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -56,6 +57,7 @@ export interface Vendor {
   panNumber?: string;
   contactPerson?: string;
   categoryId?: string;
+  category?: string;
   status: VendorStatus;
   rating?: number;
   notes?: string;

@@ -3,6 +3,7 @@ export enum UserRole {
   MANAGER = 'MANAGER',
   PROCUREMENT_OFFICER = 'PROCUREMENT_OFFICER',
   VIEWER = 'VIEWER',
+  VENDOR = 'VENDOR',
 }
 
 export enum VendorStatus {

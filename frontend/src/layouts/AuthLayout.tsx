@@ -12,8 +12,8 @@ export default function AuthLayout() {
                 <path d="M8 22L16 10L24 22H8Z" fill="white" fillOpacity="0.9" />
                 <defs>
                   <linearGradient id="logo-gradient" x1="0" y1="0" x2="32" y2="32">
-                    <stop stopColor="#6366f1" />
-                    <stop offset="1" stopColor="#8b5cf6" />
+                    <stop stopColor="#2563eb" />
+                  <stop offset="1" stopColor="#1d4ed8" />
                   </linearGradient>
                 </defs>
               </svg>

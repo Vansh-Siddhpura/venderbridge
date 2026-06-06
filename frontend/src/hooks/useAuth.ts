@@ -13,5 +13,6 @@ export const useAuth = () => {
     isManager: user?.role === 'MANAGER',
     isProcurementOfficer: user?.role === 'PROCUREMENT_OFFICER',
     isViewer: user?.role === 'VIEWER',
+    isVendor: user?.role === 'VENDOR',
   };
 };
