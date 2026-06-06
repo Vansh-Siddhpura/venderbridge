@@ -98,68 +98,68 @@ export default function DashboardPage() {
       )}
 
       {/* Role based Quick Action panel */}
-      <div className="bg-surface border border-default rounded-lg p-5 shadow-sm space-y-4">
-        <h3 className="text-xs font-bold text-muted uppercase tracking-wider border-b border-default pb-2">
+      <div className="glass-panel rounded-xl p-6 space-y-5">
+        <h3 className="text-sm font-extrabold text-primary uppercase tracking-widest border-b border-default pb-3">
           Procurement Quick Console
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {(isProcurementOfficer || isAdmin) && (
             <button
               onClick={() => navigate('/rfqs/new')}
-              className="p-4 bg-elevated/40 hover:bg-primary-light/40 border border-default hover:border-primary rounded-lg text-left transition-all cursor-pointer flex flex-col gap-2 group"
+              className="p-5 glass-card text-left flex flex-col gap-3 group"
             >
-              <PlusCircle size={24} className="text-primary group-hover:scale-105 transition-transform" />
+              <PlusCircle size={28} className="text-primary group-hover:scale-110 group-hover:text-purple-500 transition-all" />
               <div>
-                <span className="text-xs font-bold text-primary block">New RFQ Sheet</span>
-                <span className="text-[10px] text-muted block mt-0.5">Publish new material bids</span>
+                <span className="text-sm font-bold text-primary block">New RFQ Sheet</span>
+                <span className="text-[11px] text-muted block mt-1">Publish new material bids</span>
               </div>
             </button>
           )}
           {isAdmin && (
             <button
               onClick={() => navigate('/vendors/new')}
-              className="p-4 bg-elevated/40 hover:bg-primary-light/40 border border-default hover:border-primary rounded-lg text-left transition-all cursor-pointer flex flex-col gap-2 group"
+              className="p-5 glass-card text-left flex flex-col gap-3 group"
             >
-              <Building2 size={24} className="text-primary group-hover:scale-105 transition-transform" />
+              <Building2 size={28} className="text-primary group-hover:scale-110 group-hover:text-purple-500 transition-all" />
               <div>
-                <span className="text-xs font-bold text-primary block">Register Vendor</span>
-                <span className="text-[10px] text-muted block mt-0.5">Onboard business vendors</span>
+                <span className="text-sm font-bold text-primary block">Register Vendor</span>
+                <span className="text-[11px] text-muted block mt-1">Onboard business vendors</span>
               </div>
             </button>
           )}
           {isAdmin && (
             <button
               onClick={() => navigate('/admin/users')}
-              className="p-4 bg-elevated/40 hover:bg-primary-light/40 border border-default hover:border-primary rounded-lg text-left transition-all cursor-pointer flex flex-col gap-2 group"
+              className="p-5 glass-card text-left flex flex-col gap-3 group"
             >
-              <UserPlus size={24} className="text-primary group-hover:scale-105 transition-transform" />
+              <UserPlus size={28} className="text-primary group-hover:scale-110 group-hover:text-purple-500 transition-all" />
               <div>
-                <span className="text-xs font-bold text-primary block">Create User</span>
-                <span className="text-[10px] text-muted block mt-0.5">Setup staff role access</span>
+                <span className="text-sm font-bold text-primary block">Create User</span>
+                <span className="text-[11px] text-muted block mt-1">Setup staff role access</span>
               </div>
             </button>
           )}
           {isVendor && (
             <button
               onClick={() => navigate('/rfqs')}
-              className="p-4 bg-elevated/40 hover:bg-primary-light/40 border border-default hover:border-primary rounded-lg text-left transition-all cursor-pointer flex flex-col gap-2 group"
+              className="p-5 glass-card text-left flex flex-col gap-3 group"
             >
-              <FileSpreadsheet size={24} className="text-primary group-hover:scale-105 transition-transform" />
+              <FileSpreadsheet size={28} className="text-primary group-hover:scale-110 group-hover:text-purple-500 transition-all" />
               <div>
-                <span className="text-xs font-bold text-primary block">Submit Bids</span>
-                <span className="text-[10px] text-muted block mt-0.5">Quote pricing on assignments</span>
+                <span className="text-sm font-bold text-primary block">Submit Bids</span>
+                <span className="text-[11px] text-muted block mt-1">Quote pricing on assignments</span>
               </div>
             </button>
           )}
           {/* All users shortcut */}
           <button
             onClick={() => navigate('/purchase-orders')}
-            className="p-4 bg-elevated/40 hover:bg-primary-light/40 border border-default hover:border-primary rounded-lg text-left transition-all cursor-pointer flex flex-col gap-2 group"
+            className="p-5 glass-card text-left flex flex-col gap-3 group"
           >
-            <ShoppingCart size={24} className="text-primary group-hover:scale-105 transition-transform" />
+            <ShoppingCart size={28} className="text-primary group-hover:scale-110 group-hover:text-purple-500 transition-all" />
             <div>
-              <span className="text-xs font-bold text-primary block">PO Catalog</span>
-              <span className="text-[10px] text-muted block mt-0.5">View purchase orders list</span>
+              <span className="text-sm font-bold text-primary block">PO Catalog</span>
+              <span className="text-[11px] text-muted block mt-1">View purchase orders list</span>
             </div>
           </button>
         </div>

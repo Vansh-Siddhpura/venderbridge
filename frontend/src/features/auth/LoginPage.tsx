@@ -68,14 +68,14 @@ export default function LoginPage() {
         <div>
           <label className="block text-xs font-semibold text-primary mb-1">Email Address</label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
-              <Mail size={16} />
+            <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted">
+              <Mail size={18} />
             </span>
             <input
               type="email"
               {...register('email')}
               placeholder="name@company.com"
-              className="w-full pl-10 pr-3 py-2 text-sm rounded-md bg-surface border border-default text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary-light"
+              className="premium-input pl-11"
             />
           </div>
           {errors.email && (
@@ -89,20 +89,20 @@ export default function LoginPage() {
             <label className="block text-xs font-semibold text-primary">Password</label>
             <Link
               to="/forgot-password"
-              className="text-[10px] text-primary hover:underline font-semibold"
+              className="text-[10px] text-primary hover:text-primary-hover hover:underline font-semibold transition-colors"
             >
               Forgot Password?
             </Link>
           </div>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
-              <Lock size={16} />
+            <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted">
+              <Lock size={18} />
             </span>
             <input
               type="password"
               {...register('password')}
               placeholder="••••••••"
-              className="w-full pl-10 pr-3 py-2 text-sm rounded-md bg-surface border border-default text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary-light"
+              className="premium-input pl-11"
             />
           </div>
           {errors.password && (
@@ -114,10 +114,10 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-blue-600 text-white py-2 rounded-md font-semibold text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-colors cursor-pointer flex items-center justify-center gap-1 group"
+          className="premium-button w-full mt-2 group"
         >
           {isLoading ? 'Signing In...' : 'Sign In'}
-          <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+          <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
         </button>
       </form>
 

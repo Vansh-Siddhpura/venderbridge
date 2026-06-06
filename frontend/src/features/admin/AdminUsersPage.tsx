@@ -47,12 +47,7 @@ export default function AdminUsersPage() {
   });
 
   const onSubmit = (data: UserFormValues) => {
-    // Add passwordHash for the mockDb
-    const payload = {
-      ...data,
-      passwordHash: data.password,
-    };
-    createUserMutation.mutate(payload, {
+    createUserMutation.mutate(data, {
       onSuccess: () => {
         setIsModalOpen(false);
         reset();

@@ -30,19 +30,19 @@ export function DataTable({
   onRowClick,
 }: DataTableProps) {
   return (
-    <div className="w-full bg-surface border border-default rounded-lg shadow-sm overflow-hidden flex flex-col">
+    <div className="data-table w-full flex flex-col">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-elevated border-b border-default text-xs font-semibold uppercase tracking-wider text-muted">
+            <tr>
               {columns.map((col, idx) => (
-                <th key={idx} className="px-6 py-3 select-none">
+                <th key={idx}>
                   {col.header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-default">
+          <tbody>
             {isLoading ? (
               // Loading Skeleton Rows
               Array.from({ length: 5 }).map((_, rIdx) => (
