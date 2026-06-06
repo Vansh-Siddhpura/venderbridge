@@ -1,4 +1,6 @@
-// This is a generated file. See Prisma docs: https://pris.ly/d/prisma-schema
+// VendorBridge — Procurement & Vendor Management ERP
+// FINAL Prisma Schema — authoritative source of truth
+// Reconciled from: system-prompt spec + project documentation
 
 generator client {
   provider = "prisma-client-js"
@@ -6,23 +8,27 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 enum UserRole {
   ADMIN
-  MANAGER
   PROCUREMENT_OFFICER
-  VIEWER
+  MANAGER
+  VENDOR // Vendors log in with their own accounts
 }
 
+// State machine: PENDING → APPROVED | REJECTED | SUSPENDED
 enum VendorStatus {
-  ACTIVE
-  INACTIVE
-  BLACKLISTED
+  PENDING // Newly registered, awaiting admin approval
+  APPROVED
+  REJECTED
+  SUSPENDED
 }
 
+// State machine: DRAFT → PUBLISHED → CLOSED | CANCELLED
 enum RFQStatus {
   DRAFT
   PUBLISHED
@@ -30,74 +36,88 @@ enum RFQStatus {
   CANCELLED
 }
 
+// State machine: INVITED → VIEWED → SUBMITTED | DECLINED
 enum RFQVendorStatus {
-  PENDING
-  RESPONDED
-  DECLINED
-  NO_RESPONSE
-}
-
-enum QuotationStatus {
+  INVITED
+  VIEWED
   SUBMITTED
-  UNDER_REVIEW
-  ACCEPTED
-  REJECTED
+  DECLINED
 }
 
-enum ApprovalAction {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum POStatus {
+// State machine: DRAFT → SUBMITTED → SHORTLISTED | REJECTED → SELECTED
+enum QuotationStatus {
   DRAFT
-  ISSUED
+  SUBMITTED
+  SHORTLISTED
+  REJECTED
+  SELECTED
+}
+
+// Actions a manager can take on a quotation approval
+enum ApprovalAction {
+  APPROVE
+  REJECT
+  REQUEST_REVISION
+}
+
+// State machine: PENDING → ACKNOWLEDGED → FULFILLED | CANCELLED
+enum POStatus {
+  PENDING
   ACKNOWLEDGED
-  PARTIALLY_DELIVERED
-  DELIVERED
+  FULFILLED
   CANCELLED
 }
 
+// State machine: DRAFT → SENT → PAID | OVERDUE | CANCELLED
 enum InvoiceStatus {
   DRAFT
-  SUBMITTED
-  APPROVED
+  SENT
   PAID
-  DISPUTED
+  OVERDUE
   CANCELLED
 }
 
 // ─── Models ──────────────────────────────────────────────────────────────────
 
+// ── User ─────────────────────────────────────────────────────────────────────
+// vendorId: nullable FK — only set when role = VENDOR.
+// Lets JWT carry { userId, role, vendorId? } for vendor data isolation.
 model User {
-  id            String    @id @default(uuid()) @db.Uuid
-  email         String    @unique
-  passwordHash  String    @map("password_hash")
-  firstName     String    @map("first_name")
-  lastName      String    @map("last_name")
-  role          UserRole  @default(VIEWER)
-  isActive      Boolean   @default(true) @map("is_active")
-  lastLoginAt   DateTime? @map("last_login_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  deletedAt     DateTime? @map("deleted_at")
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  firstName    String    @map("first_name")
+  lastName     String    @map("last_name")
+  role         UserRole  @default(PROCUREMENT_OFFICER)
+  vendorId     String?   @map("vendor_id") @db.Uuid // only set when role = VENDOR
+  isActive              Boolean   @default(true) @map("is_active")
+  lastLoginAt           DateTime? @map("last_login_at")
+  passwordResetToken    String?   @map("password_reset_token")   // hashed reset token
+  passwordResetExpiry   DateTime? @map("password_reset_expiry")  // 1-hour window
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at") // soft delete
 
+  vendor        Vendor?        @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   refreshTokens RefreshToken[]
-  approvals     Approval[]
   activityLogs  ActivityLog[]
   createdRfqs   RFQ[]          @relation("RFQCreator")
+  approvals     Approval[]
 
   @@index([email])
   @@index([role])
+  @@index([vendorId])
   @@map("users")
 }
 
+// ── RefreshToken ──────────────────────────────────────────────────────────────
+// isRevoked: for rotation-on-use and explicit logout revocation.
 model RefreshToken {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   token     String   @unique
   userId    String   @map("user_id") @db.Uuid
   expiresAt DateTime @map("expires_at")
+  isRevoked Boolean  @default(false) @map("is_revoked")
   createdAt DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -107,54 +127,61 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+// ── VendorCategory ────────────────────────────────────────────────────────────
 model VendorCategory {
-  id          String    @id @default(uuid()) @db.Uuid
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String    @unique
   description String?
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
+  deletedAt   DateTime? @map("deleted_at") // soft delete
 
   vendors Vendor[]
 
   @@map("vendor_categories")
 }
 
+// ── Vendor ────────────────────────────────────────────────────────────────────
+// address is JSONB: { street, city, state, pincode, country }
+// status default PENDING — admin must APPROVE before vendor can login
+// rating uses Decimal(3,2) to avoid float imprecision
 model Vendor {
-  id              String       @id @default(uuid()) @db.Uuid
-  name            String
-  email           String       @unique
-  phone           String?
-  address         String?
-  city            String?
-  state           String?
-  pincode         String?
-  gstNumber       String?      @map("gst_number")
-  panNumber       String?      @map("pan_number")
-  contactPerson   String?      @map("contact_person")
-  categoryId      String?      @map("category_id") @db.Uuid
-  status          VendorStatus @default(ACTIVE)
-  rating          Float?       @default(0)
-  notes           String?
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
-  deletedAt       DateTime?    @map("deleted_at")
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyName   String       @map("company_name")
+  email         String       @unique
+  phone         String?
+  address       Json? // JSONB: { street, city, state, pincode, country }
+  gstin         String? // GST Identification Number
+  pan           String? // Permanent Account Number
+  contactPerson String?      @map("contact_person")
+  categoryId    String?      @map("category_id") @db.Uuid
+  status        VendorStatus @default(PENDING)
+  rating        Decimal      @default(0) @db.Decimal(3, 2)
+  notes         String?
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  deletedAt     DateTime?    @map("deleted_at") // soft delete
 
-  category    VendorCategory? @relation(fields: [categoryId], references: [id])
-  rfqVendors  RFQVendor[]
-  quotations  Quotation[]
+  category       VendorCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  users          User[] // vendor-role users linked to this vendor
+  rfqVendors     RFQVendor[]
+  quotations     Quotation[]
   purchaseOrders PurchaseOrder[]
-  invoices    Invoice[]
+  invoices       Invoice[]
 
   @@index([email])
   @@index([status])
   @@index([categoryId])
+  @@index([companyName]) // full-text search candidate
   @@map("vendors")
 }
 
+// ── RFQ ───────────────────────────────────────────────────────────────────────
+// State machine: DRAFT → PUBLISHED → CLOSED | CANCELLED
+// Approvals removed — approvals are now on Quotation
 model RFQ {
-  id          String    @id @default(uuid()) @db.Uuid
-  rfqNumber   String    @unique @map("rfq_number")
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rfqNumber   String    @unique @map("rfq_number") // e.g. RFQ-2025-00001
   title       String
   description String?
   status      RFQStatus @default(DRAFT)
@@ -162,71 +189,87 @@ model RFQ {
   createdBy   String    @map("created_by") @db.Uuid
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
+  deletedAt   DateTime? @map("deleted_at") // soft delete
 
-  creator    User        @relation("RFQCreator", fields: [createdBy], references: [id])
+  creator    User        @relation("RFQCreator", fields: [createdBy], references: [id], onDelete: Restrict)
   items      RFQItem[]
   rfqVendors RFQVendor[]
-  approvals  Approval[]
+  quotations Quotation[]
 
   @@index([rfqNumber])
   @@index([status])
   @@index([createdBy])
+  @@index([title]) // full-text search candidate
   @@map("rfqs")
 }
 
+// ── RFQItem ───────────────────────────────────────────────────────────────────
+// quantity: Decimal(15,4) — avoids float imprecision
+// specifications: JSONB for flexible item specs (dimensions, brand, grade, etc.)
 model RFQItem {
-  id          String  @id @default(uuid()) @db.Uuid
-  rfqId       String  @map("rfq_id") @db.Uuid
-  description String
-  quantity    Float
-  unit        String
-  specifications String?
-  sortOrder   Int     @default(0) @map("sort_order")
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rfqId          String  @map("rfq_id") @db.Uuid
+  description    String
+  quantity       Decimal @db.Decimal(15, 4)
+  unit           String
+  specifications Json? // JSONB: flexible key-value specs
+  sortOrder      Int     @default(0) @map("sort_order")
 
-  rfq            RFQ              @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  rfq            RFQ             @relation(fields: [rfqId], references: [id], onDelete: Cascade)
   quotationItems QuotationItem[]
 
   @@index([rfqId])
   @@map("rfq_items")
 }
 
+// ── RFQVendor ─────────────────────────────────────────────────────────────────
+// invitedAt: when the RFQ was assigned to this vendor
+// viewedAt: set when vendor first opens the RFQ detail (status → VIEWED)
+// respondedAt: set when vendor submits quotation or declines (status → SUBMITTED | DECLINED)
 model RFQVendor {
-  id        String          @id @default(uuid()) @db.Uuid
-  rfqId     String          @map("rfq_id") @db.Uuid
-  vendorId  String          @map("vendor_id") @db.Uuid
-  status    RFQVendorStatus @default(PENDING)
-  sentAt    DateTime?       @map("sent_at")
-  respondedAt DateTime?     @map("responded_at")
-  createdAt DateTime        @default(now()) @map("created_at")
-  updatedAt DateTime        @updatedAt @map("updated_at")
+  id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rfqId       String          @map("rfq_id") @db.Uuid
+  vendorId    String          @map("vendor_id") @db.Uuid
+  status      RFQVendorStatus @default(INVITED)
+  invitedAt   DateTime        @default(now()) @map("invited_at")
+  viewedAt    DateTime?       @map("viewed_at") // set when vendor opens the RFQ
+  respondedAt DateTime?       @map("responded_at") // set when vendor submits/declines
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
 
   rfq    RFQ    @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-  vendor Vendor @relation(fields: [vendorId], references: [id])
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Restrict)
 
   @@unique([rfqId, vendorId])
   @@index([rfqId])
   @@index([vendorId])
+  @@index([status])
   @@map("rfq_vendors")
 }
 
+// ── Quotation ─────────────────────────────────────────────────────────────────
+// rfqId: required (not nullable) — every quotation must belong to an RFQ
+// submittedAt: null while status = DRAFT, set when vendor submits
+// State machine: DRAFT → SUBMITTED → SHORTLISTED | REJECTED → SELECTED
 model Quotation {
-  id              String          @id @default(uuid()) @db.Uuid
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   quotationNumber String          @unique @map("quotation_number")
-  rfqId           String?         @map("rfq_id") @db.Uuid
+  rfqId           String          @map("rfq_id") @db.Uuid // required — not optional
   vendorId        String          @map("vendor_id") @db.Uuid
-  status          QuotationStatus @default(SUBMITTED)
+  status          QuotationStatus @default(DRAFT)
   totalAmount     Decimal         @default(0) @map("total_amount") @db.Decimal(15, 2)
   validUntil      DateTime?       @map("valid_until")
   terms           String?
   notes           String?
-  submittedAt     DateTime        @default(now()) @map("submitted_at")
+  submittedAt     DateTime?       @map("submitted_at") // null until status = SUBMITTED
   createdAt       DateTime        @default(now()) @map("created_at")
   updatedAt       DateTime        @updatedAt @map("updated_at")
-  deletedAt       DateTime?       @map("deleted_at")
+  deletedAt       DateTime?       @map("deleted_at") // soft delete
 
-  vendor Vendor          @relation(fields: [vendorId], references: [id])
-  items  QuotationItem[]
+  rfq            RFQ             @relation(fields: [rfqId], references: [id], onDelete: Restrict)
+  vendor         Vendor          @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  items          QuotationItem[]
+  approvals      Approval[]
   purchaseOrders PurchaseOrder[]
 
   @@index([rfqId])
@@ -235,80 +278,91 @@ model Quotation {
   @@map("quotations")
 }
 
+// ── QuotationItem ─────────────────────────────────────────────────────────────
+// rfqItemId: nullable — vendor may add extra line items not in the original RFQ
+// quantity: Decimal(15,4) — avoids float imprecision
 model QuotationItem {
-  id          String  @id @default(uuid()) @db.Uuid
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   quotationId String  @map("quotation_id") @db.Uuid
-  rfqItemId   String? @map("rfq_item_id") @db.Uuid
+  rfqItemId   String? @map("rfq_item_id") @db.Uuid // nullable: vendor may add extra lines
   description String
-  quantity    Float
+  quantity    Decimal @db.Decimal(15, 4)
   unit        String
   unitPrice   Decimal @map("unit_price") @db.Decimal(15, 2)
   totalPrice  Decimal @map("total_price") @db.Decimal(15, 2)
   notes       String?
 
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  rfqItem   RFQItem?  @relation(fields: [rfqItemId], references: [id])
+  rfqItem   RFQItem?  @relation(fields: [rfqItemId], references: [id], onDelete: SetNull)
 
   @@index([quotationId])
+  @@index([rfqItemId])
   @@map("quotation_items")
 }
 
+// ── Approval ──────────────────────────────────────────────────────────────────
+// Append-only — one row per action taken on a quotation.
+// action: what the manager did (APPROVE | REJECT | REQUEST_REVISION)
+// APPROVE → quotation.status becomes SELECTED
+// REJECT  → quotation.status becomes REJECTED
+// REQUEST_REVISION → quotation.status stays SUBMITTED (vendor must resubmit)
 model Approval {
-  id        String         @id @default(uuid()) @db.Uuid
-  rfqId     String?        @map("rfq_id") @db.Uuid
-  poId      String?        @map("po_id") @db.Uuid
-  invoiceId String?        @map("invoice_id") @db.Uuid
-  userId    String         @map("user_id") @db.Uuid
-  action    ApprovalAction @default(PENDING)
-  comments  String?
-  actedAt   DateTime?      @map("acted_at")
-  createdAt DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime       @updatedAt @map("updated_at")
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quotationId String         @map("quotation_id") @db.Uuid
+  approverId  String         @map("approver_id") @db.Uuid
+  action      ApprovalAction
+  comments    String?
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
 
-  rfq     RFQ?           @relation(fields: [rfqId], references: [id])
-  po      PurchaseOrder? @relation(fields: [poId], references: [id])
-  invoice Invoice?       @relation(fields: [invoiceId], references: [id])
-  user    User           @relation(fields: [userId], references: [id])
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  approver  User      @relation(fields: [approverId], references: [id], onDelete: Restrict)
 
-  @@index([rfqId])
-  @@index([poId])
-  @@index([invoiceId])
-  @@index([userId])
+  @@index([quotationId])
+  @@index([approverId])
   @@map("approvals")
 }
 
+// ── PurchaseOrder ─────────────────────────────────────────────────────────────
+// quotationId: required — PO must always be generated from an approved quotation
+// shippingAddress: JSONB address object
+// acknowledgedAt / fulfilledAt: timestamps for state transitions
+// State machine: PENDING → ACKNOWLEDGED → FULFILLED | CANCELLED
 model PurchaseOrder {
-  id            String   @id @default(uuid()) @db.Uuid
-  poNumber      String   @unique @map("po_number")
-  vendorId      String   @map("vendor_id") @db.Uuid
-  quotationId   String?  @map("quotation_id") @db.Uuid
-  status        POStatus @default(DRAFT)
-  totalAmount   Decimal  @default(0) @map("total_amount") @db.Decimal(15, 2)
-  shippingAddress String? @map("shipping_address")
-  terms         String?
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  poNumber         String    @unique @map("po_number") // e.g. PO-2025-00001
+  vendorId         String    @map("vendor_id") @db.Uuid
+  quotationId      String    @map("quotation_id") @db.Uuid // required
+  status           POStatus  @default(PENDING)
+  totalAmount      Decimal   @default(0) @map("total_amount") @db.Decimal(15, 2)
+  shippingAddress  Json?     @map("shipping_address") // JSONB address object
+  terms            String?
   expectedDelivery DateTime? @map("expected_delivery")
-  issuedAt      DateTime?  @map("issued_at")
-  createdAt     DateTime   @default(now()) @map("created_at")
-  updatedAt     DateTime   @updatedAt @map("updated_at")
-  deletedAt     DateTime?  @map("deleted_at")
+  acknowledgedAt   DateTime? @map("acknowledged_at") // set on ACKNOWLEDGED
+  fulfilledAt      DateTime? @map("fulfilled_at") // set on FULFILLED
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at") // soft delete
 
-  vendor    Vendor     @relation(fields: [vendorId], references: [id])
-  quotation Quotation? @relation(fields: [quotationId], references: [id])
+  vendor    Vendor    @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Restrict)
   items     POItem[]
-  approvals Approval[]
   invoices  Invoice[]
 
   @@index([poNumber])
   @@index([vendorId])
+  @@index([quotationId])
   @@index([status])
   @@map("purchase_orders")
 }
 
+// ── POItem ────────────────────────────────────────────────────────────────────
+// quantity: Decimal(15,4) — avoids float imprecision
 model POItem {
-  id              String  @id @default(uuid()) @db.Uuid
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   purchaseOrderId String  @map("purchase_order_id") @db.Uuid
   description     String
-  quantity        Float
+  quantity        Decimal @db.Decimal(15, 4)
   unit            String
   unitPrice       Decimal @map("unit_price") @db.Decimal(15, 2)
   totalPrice      Decimal @map("total_price") @db.Decimal(15, 2)
@@ -320,44 +374,58 @@ model POItem {
   @@map("po_items")
 }
 
+// ── Invoice ───────────────────────────────────────────────────────────────────
+// purchaseOrderId: required — invoice must always come from a PO
+// GST fields: subtotal + totalCgst + totalSgst + totalAmount (Indian GST compliance)
+// pdfUrl: Cloudinary URL set after Puppeteer PDF generation
+// State machine: DRAFT → SENT → PAID | OVERDUE | CANCELLED
 model Invoice {
-  id              String        @id @default(uuid()) @db.Uuid
-  invoiceNumber   String        @unique @map("invoice_number")
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceNumber   String        @unique @map("invoice_number") // e.g. INV-2025-00001
   vendorId        String        @map("vendor_id") @db.Uuid
-  purchaseOrderId String?       @map("purchase_order_id") @db.Uuid
+  purchaseOrderId String        @map("purchase_order_id") @db.Uuid // required
   status          InvoiceStatus @default(DRAFT)
-  totalAmount     Decimal       @default(0) @map("total_amount") @db.Decimal(15, 2)
-  taxAmount       Decimal       @default(0) @map("tax_amount") @db.Decimal(15, 2)
-  netAmount       Decimal       @default(0) @map("net_amount") @db.Decimal(15, 2)
+  subtotal        Decimal       @default(0) @db.Decimal(15, 2) // sum of line totals before tax
+  totalCgst       Decimal       @default(0) @map("total_cgst") @db.Decimal(15, 2)
+  totalSgst       Decimal       @default(0) @map("total_sgst") @db.Decimal(15, 2)
+  totalAmount     Decimal       @default(0) @map("total_amount") @db.Decimal(15, 2) // subtotal + cgst + sgst
   dueDate         DateTime?     @map("due_date")
   paidAt          DateTime?     @map("paid_at")
+  pdfUrl          String?       @map("pdf_url") // Cloudinary URL set after PDF generation
   notes           String?
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
-  deletedAt       DateTime?     @map("deleted_at")
+  deletedAt       DateTime?     @map("deleted_at") // soft delete
 
-  vendor        Vendor         @relation(fields: [vendorId], references: [id])
-  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  vendor        Vendor        @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
   items         InvoiceItem[]
-  approvals     Approval[]
 
   @@index([invoiceNumber])
   @@index([vendorId])
+  @@index([purchaseOrderId])
   @@index([status])
   @@map("invoices")
 }
 
+// ── InvoiceItem ───────────────────────────────────────────────────────────────
+// gstRate: total GST % (e.g. 18.00) — split 50/50 into CGST and SGST
+// cgstAmount: gstRate/2 × (qty × unitPrice)
+// sgstAmount: gstRate/2 × (qty × unitPrice)
+// lineTotal: qty × unitPrice + cgstAmount + sgstAmount
+// hsnCode: required for GST-compliant invoices
 model InvoiceItem {
-  id          String  @id @default(uuid()) @db.Uuid
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   invoiceId   String  @map("invoice_id") @db.Uuid
   description String
-  quantity    Float
+  quantity    Decimal @db.Decimal(15, 4)
   unit        String
   unitPrice   Decimal @map("unit_price") @db.Decimal(15, 2)
-  totalPrice  Decimal @map("total_price") @db.Decimal(15, 2)
-  hsnCode     String? @map("hsn_code")
-  taxRate     Decimal @default(0) @map("tax_rate") @db.Decimal(5, 2)
-  taxAmount   Decimal @default(0) @map("tax_amount") @db.Decimal(15, 2)
+  hsnCode     String? @map("hsn_code") // HSN/SAC code for GST
+  gstRate     Decimal @default(0) @map("gst_rate") @db.Decimal(5, 2) // total GST % (e.g. 18.00)
+  cgstAmount  Decimal @default(0) @map("cgst_amount") @db.Decimal(15, 2) // gstRate/2 × base
+  sgstAmount  Decimal @default(0) @map("sgst_amount") @db.Decimal(15, 2) // gstRate/2 × base
+  lineTotal   Decimal @map("line_total") @db.Decimal(15, 2) // qty × unitPrice + cgst + sgst
 
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
@@ -365,30 +433,38 @@ model InvoiceItem {
   @@map("invoice_items")
 }
 
+// ── ActivityLog ───────────────────────────────────────────────────────────────
+// Append-only — no update/delete operations ever.
+// entityType: 'rfq' | 'quotation' | 'po' | 'invoice' | 'vendor' | 'user'
+// metadata: JSONB { before?, after?, ip? }
 model ActivityLog {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId     String?  @map("user_id") @db.Uuid
-  action     String
-  entity     String
+  action     String // e.g. 'rfq.created', 'quotation.submitted', 'po.generated'
+  entityType String   @map("entity_type")
   entityId   String?  @map("entity_id") @db.Uuid
-  details    Json?
+  metadata   Json? // JSONB: { before?, after?, ip? }
   ipAddress  String?  @map("ip_address")
   createdAt  DateTime @default(now()) @map("created_at")
 
-  user User? @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
-  @@index([entity, entityId])
+  @@index([entityType, entityId])
   @@index([createdAt])
   @@map("activity_logs")
 }
 
+// ── Sequence ──────────────────────────────────────────────────────────────────
+// Seed rows: { name: 'rfq', prefix: 'RFQ' } | { name: 'po', prefix: 'PO' } | { name: 'invoice', prefix: 'INV' }
+// generateSequenceNumber() locks this row with SELECT FOR UPDATE to prevent race conditions.
+// padLength: 5 → RFQ-2025-00001
 model Sequence {
-  id          String @id @default(uuid()) @db.Uuid
-  name        String @unique
-  prefix      String
-  currentValue Int   @default(0) @map("current_value")
-  padLength   Int    @default(6) @map("pad_length")
+  id           String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String @unique // 'rfq' | 'po' | 'invoice'
+  prefix       String // 'RFQ' | 'PO' | 'INV'
+  currentValue Int    @default(0) @map("current_value")
+  padLength    Int    @default(5) @map("pad_length") // 5 → RFQ-2025-00001
 
   @@map("sequences")
 }

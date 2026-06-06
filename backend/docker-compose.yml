@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: vendorbridge_pass
       POSTGRES_DB: vendorbridge
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

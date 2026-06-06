@@ -1,13 +1,29 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
 
-const connectionString = process.env.DATABASE_URL!;
+// Prevent multiple PrismaClient instances in development (hot-reload safe)
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-const adapter = new PrismaPg({ connectionString });
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: [
+      { emit: 'event', level: 'query' },
+      { emit: 'event', level: 'error' },
+      { emit: 'event', level: 'warn' },
+    ],
+  });
 
-const prisma = new PrismaClient({
-  adapter,
-  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
-});
+// Log slow queries in development (> 200ms)
+if (process.env.NODE_ENV === 'development') {
+  (prisma as any).$on('query', (e: any) => {
+    if (e.duration > 200) {
+      console.warn(`⚠️  Slow query (${e.duration}ms): ${e.query}`);
+    }
+  });
+}
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
 
 export default prisma;

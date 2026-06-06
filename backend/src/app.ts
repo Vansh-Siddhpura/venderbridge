@@ -1,59 +1,83 @@
-import express, { Request, Response } from 'express';
-import helmet from 'helmet';
+import express, { Express } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import morgan from 'morgan';
-import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
+
 import { env } from './config/env';
+import { logger } from './utils/logger';
 import { errorHandler } from './middlewares/error.middleware';
 
-const app = express();
+// Routers
+import authRoutes from './modules/auth/routes';
+import userRoutes from './modules/users/routes';
+import vendorRoutes from './modules/vendors/routes';
+import rfqRoutes from './modules/rfqs/routes';
+import quotationRoutes from './modules/quotations/routes';
+import approvalRoutes from './modules/approvals/routes';
+import poRoutes from './modules/purchase-orders/routes';
+import invoiceRoutes from './modules/invoices/routes';
+import activityLogRoutes from './modules/activity-logs/routes';
+import reportRoutes from './modules/reports/routes';
 
-// ─── Security ────────────────────────────────────────────────────────────────
+const app: Express = express();
+
+// ── Security & Utility Middlewares ──────────────────────────────────────────
 app.use(helmet());
 app.use(
   cors({
     origin: env.CORS_ORIGIN,
-    credentials: true,
+    credentials: true, // required for httpOnly refresh token cookie
+  })
+);
+app.use(express.json());
+app.use(cookieParser());
+
+// ── Logging ───────────────────────────────────────────────────────────────────
+app.use(
+  morgan('combined', {
+    stream: { write: (message: string) => logger.info(message.trim()) },
   })
 );
 
-// ─── Body Parsing ────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+// ── Rate Limiting ─────────────────────────────────────────────────────────────
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { success: false, error: { code: 'RATE_LIMIT', message: 'Too many requests' } },
+});
+app.use('/api', globalLimiter);
 
-// ─── Logging ─────────────────────────────────────────────────────────────────
-app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-
-// ─── Rate Limiting (auth routes) ─────────────────────────────────────────────
 const authLimiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS,
-  max: env.RATE_LIMIT_MAX_REQUESTS,
-  message: {
-    success: false,
-    message: 'Too many requests from this IP, please try again later.',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use('/api/auth', authLimiter);
-
-// ─── Health Check ────────────────────────────────────────────────────────────
-app.get('/health', (_req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-  });
+  max: env.RATE_LIMIT_MAX_REQUESTS, // e.g. 5 requests per 15 min for auth
+  message: { success: false, error: { code: 'RATE_LIMIT', message: 'Too many auth requests' } },
 });
 
-// ─── API Routes (will be added per module) ───────────────────────────────────
-// app.use('/api/auth', authRouter);
-// app.use('/api/vendors', vendorRouter);
-// app.use('/api/rfqs', rfqRouter);
-// ...
+// ── Routes ────────────────────────────────────────────────────────────────────
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/vendors', vendorRoutes);
+app.use('/api/rfqs', rfqRoutes);
+app.use('/api/quotations', quotationRoutes);
+app.use('/api/approvals', approvalRoutes);
+app.use('/api/purchase-orders', poRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/activity-logs', activityLogRoutes);
+app.use('/api/reports', reportRoutes);
 
-// ─── Global Error Handler (must be last) ─────────────────────────────────────
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ success: true, data: { status: 'OK', timestamp: new Date() } });
+});
+
+// Handle 404
+app.use((req, res) => {
+  res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Route not found' } });
+});
+
+// ── Global Error Handler (must be last) ───────────────────────────────────────
 app.use(errorHandler);
 
 export default app;

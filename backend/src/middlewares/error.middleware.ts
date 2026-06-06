@@ -1,58 +1,115 @@
+import { ZodError } from 'zod';
 import { Request, Response, NextFunction } from 'express';
+import { logger } from '../utils/logger';
 
+// ── AppError ──────────────────────────────────────────────────────────────────
 /**
- * Custom application error class with HTTP status codes
+ * Custom operational error with a machine-readable code, human message, and HTTP status.
+ * Always throw this instead of generic Error inside services.
  */
 export class AppError extends Error {
+  public readonly code: string;
   public readonly statusCode: number;
   public readonly isOperational: boolean;
 
-  constructor(message: string, statusCode: number, isOperational = true) {
+  constructor(code: string, message: string, statusCode: number, isOperational = true) {
     super(message);
+    this.code = code;
     this.statusCode = statusCode;
     this.isOperational = isOperational;
-
-    // Maintain proper stack trace
     Error.captureStackTrace(this, this.constructor);
     Object.setPrototypeOf(this, AppError.prototype);
   }
 }
 
+// ── Global Error Handler ──────────────────────────────────────────────────────
 /**
- * Global Express error handler middleware
+ * Express global error middleware — must be registered last.
+ * Emits the spec-compliant shape:
+ *   { success: false, error: { code, message, details? } }
  */
 export const errorHandler = (
-  err: Error | AppError,
+  err: unknown,
   _req: Request,
   res: Response,
   _next: NextFunction
 ): void => {
-  // Default values
-  let statusCode = 500;
-  let message = 'Internal Server Error';
-  let isOperational = false;
+  const isProd = process.env.NODE_ENV === 'production';
 
+  // ── Zod validation error ─────────────────────────────────────────────────
+  if (err instanceof ZodError) {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Request validation failed',
+        details: err.issues,
+      },
+    });
+    return;
+  }
+
+  // ── AppError (operational) ───────────────────────────────────────────────
   if (err instanceof AppError) {
-    statusCode = err.statusCode;
-    message = err.message;
-    isOperational = err.isOperational;
-  } else if (err instanceof SyntaxError && 'body' in err) {
-    // JSON parse error
-    statusCode = 400;
-    message = 'Invalid JSON in request body';
-    isOperational = true;
+    if (!err.isOperational) {
+      logger.error('Unexpected AppError', { code: err.code, message: err.message, stack: err.stack });
+    }
+    res.status(err.statusCode).json({
+      success: false,
+      error: {
+        code: err.code,
+        message: err.message,
+        ...(!isProd && { stack: err.stack }),
+      },
+    });
+    return;
   }
 
-  // Log non-operational errors (unexpected bugs)
-  if (!isOperational) {
-    console.error('💥 UNEXPECTED ERROR:', err);
+  // ── JSON parse errors ────────────────────────────────────────────────────
+  if (err instanceof SyntaxError && 'body' in (err as object)) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'Invalid JSON in request body' },
+    });
+    return;
   }
 
-  res.status(statusCode).json({
+  // ── Prisma unique constraint (P2002) ─────────────────────────────────────
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code: string }).code === 'P2002'
+  ) {
+    res.status(409).json({
+      success: false,
+      error: { code: 'CONFLICT', message: 'A record with that value already exists' },
+    });
+    return;
+  }
+
+  // ── Prisma record not found (P2025) ──────────────────────────────────────
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code: string }).code === 'P2025'
+  ) {
+    res.status(404).json({
+      success: false,
+      error: { code: 'NOT_FOUND', message: 'Record not found' },
+    });
+    return;
+  }
+
+  // ── Unexpected / unknown error ───────────────────────────────────────────
+  logger.error('💥 Unexpected error', { err });
+  res.status(500).json({
     success: false,
-    message,
-    ...(process.env.NODE_ENV === 'development' && {
-      stack: err.stack,
-    }),
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: isProd ? 'An unexpected error occurred' : String(err),
+      ...(!isProd && err instanceof Error && { stack: err.stack }),
+    },
   });
 };
