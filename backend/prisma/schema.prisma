@@ -1,0 +1,394 @@
+// This is a generated file. See Prisma docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  PROCUREMENT_OFFICER
+  VIEWER
+}
+
+enum VendorStatus {
+  ACTIVE
+  INACTIVE
+  BLACKLISTED
+}
+
+enum RFQStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  CANCELLED
+}
+
+enum RFQVendorStatus {
+  PENDING
+  RESPONDED
+  DECLINED
+  NO_RESPONSE
+}
+
+enum QuotationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  ACCEPTED
+  REJECTED
+}
+
+enum ApprovalAction {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum POStatus {
+  DRAFT
+  ISSUED
+  ACKNOWLEDGED
+  PARTIALLY_DELIVERED
+  DELIVERED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  PAID
+  DISPUTED
+  CANCELLED
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  firstName     String    @map("first_name")
+  lastName      String    @map("last_name")
+  role          UserRole  @default(VIEWER)
+  isActive      Boolean   @default(true) @map("is_active")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  refreshTokens RefreshToken[]
+  approvals     Approval[]
+  activityLogs  ActivityLog[]
+  createdRfqs   RFQ[]          @relation("RFQCreator")
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  userId    String   @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model VendorCategory {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  vendors Vendor[]
+
+  @@map("vendor_categories")
+}
+
+model Vendor {
+  id              String       @id @default(uuid()) @db.Uuid
+  name            String
+  email           String       @unique
+  phone           String?
+  address         String?
+  city            String?
+  state           String?
+  pincode         String?
+  gstNumber       String?      @map("gst_number")
+  panNumber       String?      @map("pan_number")
+  contactPerson   String?      @map("contact_person")
+  categoryId      String?      @map("category_id") @db.Uuid
+  status          VendorStatus @default(ACTIVE)
+  rating          Float?       @default(0)
+  notes           String?
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  deletedAt       DateTime?    @map("deleted_at")
+
+  category    VendorCategory? @relation(fields: [categoryId], references: [id])
+  rfqVendors  RFQVendor[]
+  quotations  Quotation[]
+  purchaseOrders PurchaseOrder[]
+  invoices    Invoice[]
+
+  @@index([email])
+  @@index([status])
+  @@index([categoryId])
+  @@map("vendors")
+}
+
+model RFQ {
+  id          String    @id @default(uuid()) @db.Uuid
+  rfqNumber   String    @unique @map("rfq_number")
+  title       String
+  description String?
+  status      RFQStatus @default(DRAFT)
+  deadline    DateTime?
+  createdBy   String    @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  creator    User        @relation("RFQCreator", fields: [createdBy], references: [id])
+  items      RFQItem[]
+  rfqVendors RFQVendor[]
+  approvals  Approval[]
+
+  @@index([rfqNumber])
+  @@index([status])
+  @@index([createdBy])
+  @@map("rfqs")
+}
+
+model RFQItem {
+  id          String  @id @default(uuid()) @db.Uuid
+  rfqId       String  @map("rfq_id") @db.Uuid
+  description String
+  quantity    Float
+  unit        String
+  specifications String?
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  rfq            RFQ              @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  quotationItems QuotationItem[]
+
+  @@index([rfqId])
+  @@map("rfq_items")
+}
+
+model RFQVendor {
+  id        String          @id @default(uuid()) @db.Uuid
+  rfqId     String          @map("rfq_id") @db.Uuid
+  vendorId  String          @map("vendor_id") @db.Uuid
+  status    RFQVendorStatus @default(PENDING)
+  sentAt    DateTime?       @map("sent_at")
+  respondedAt DateTime?     @map("responded_at")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  rfq    RFQ    @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  vendor Vendor @relation(fields: [vendorId], references: [id])
+
+  @@unique([rfqId, vendorId])
+  @@index([rfqId])
+  @@index([vendorId])
+  @@map("rfq_vendors")
+}
+
+model Quotation {
+  id              String          @id @default(uuid()) @db.Uuid
+  quotationNumber String          @unique @map("quotation_number")
+  rfqId           String?         @map("rfq_id") @db.Uuid
+  vendorId        String          @map("vendor_id") @db.Uuid
+  status          QuotationStatus @default(SUBMITTED)
+  totalAmount     Decimal         @default(0) @map("total_amount") @db.Decimal(15, 2)
+  validUntil      DateTime?       @map("valid_until")
+  terms           String?
+  notes           String?
+  submittedAt     DateTime        @default(now()) @map("submitted_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  deletedAt       DateTime?       @map("deleted_at")
+
+  vendor Vendor          @relation(fields: [vendorId], references: [id])
+  items  QuotationItem[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([rfqId])
+  @@index([vendorId])
+  @@index([status])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id          String  @id @default(uuid()) @db.Uuid
+  quotationId String  @map("quotation_id") @db.Uuid
+  rfqItemId   String? @map("rfq_item_id") @db.Uuid
+  description String
+  quantity    Float
+  unit        String
+  unitPrice   Decimal @map("unit_price") @db.Decimal(15, 2)
+  totalPrice  Decimal @map("total_price") @db.Decimal(15, 2)
+  notes       String?
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  rfqItem   RFQItem?  @relation(fields: [rfqItemId], references: [id])
+
+  @@index([quotationId])
+  @@map("quotation_items")
+}
+
+model Approval {
+  id        String         @id @default(uuid()) @db.Uuid
+  rfqId     String?        @map("rfq_id") @db.Uuid
+  poId      String?        @map("po_id") @db.Uuid
+  invoiceId String?        @map("invoice_id") @db.Uuid
+  userId    String         @map("user_id") @db.Uuid
+  action    ApprovalAction @default(PENDING)
+  comments  String?
+  actedAt   DateTime?      @map("acted_at")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  rfq     RFQ?           @relation(fields: [rfqId], references: [id])
+  po      PurchaseOrder? @relation(fields: [poId], references: [id])
+  invoice Invoice?       @relation(fields: [invoiceId], references: [id])
+  user    User           @relation(fields: [userId], references: [id])
+
+  @@index([rfqId])
+  @@index([poId])
+  @@index([invoiceId])
+  @@index([userId])
+  @@map("approvals")
+}
+
+model PurchaseOrder {
+  id            String   @id @default(uuid()) @db.Uuid
+  poNumber      String   @unique @map("po_number")
+  vendorId      String   @map("vendor_id") @db.Uuid
+  quotationId   String?  @map("quotation_id") @db.Uuid
+  status        POStatus @default(DRAFT)
+  totalAmount   Decimal  @default(0) @map("total_amount") @db.Decimal(15, 2)
+  shippingAddress String? @map("shipping_address")
+  terms         String?
+  expectedDelivery DateTime? @map("expected_delivery")
+  issuedAt      DateTime?  @map("issued_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  deletedAt     DateTime?  @map("deleted_at")
+
+  vendor    Vendor     @relation(fields: [vendorId], references: [id])
+  quotation Quotation? @relation(fields: [quotationId], references: [id])
+  items     POItem[]
+  approvals Approval[]
+  invoices  Invoice[]
+
+  @@index([poNumber])
+  @@index([vendorId])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+model POItem {
+  id              String  @id @default(uuid()) @db.Uuid
+  purchaseOrderId String  @map("purchase_order_id") @db.Uuid
+  description     String
+  quantity        Float
+  unit            String
+  unitPrice       Decimal @map("unit_price") @db.Decimal(15, 2)
+  totalPrice      Decimal @map("total_price") @db.Decimal(15, 2)
+  notes           String?
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+  @@map("po_items")
+}
+
+model Invoice {
+  id              String        @id @default(uuid()) @db.Uuid
+  invoiceNumber   String        @unique @map("invoice_number")
+  vendorId        String        @map("vendor_id") @db.Uuid
+  purchaseOrderId String?       @map("purchase_order_id") @db.Uuid
+  status          InvoiceStatus @default(DRAFT)
+  totalAmount     Decimal       @default(0) @map("total_amount") @db.Decimal(15, 2)
+  taxAmount       Decimal       @default(0) @map("tax_amount") @db.Decimal(15, 2)
+  netAmount       Decimal       @default(0) @map("net_amount") @db.Decimal(15, 2)
+  dueDate         DateTime?     @map("due_date")
+  paidAt          DateTime?     @map("paid_at")
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  deletedAt       DateTime?     @map("deleted_at")
+
+  vendor        Vendor         @relation(fields: [vendorId], references: [id])
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  items         InvoiceItem[]
+  approvals     Approval[]
+
+  @@index([invoiceNumber])
+  @@index([vendorId])
+  @@index([status])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String  @id @default(uuid()) @db.Uuid
+  invoiceId   String  @map("invoice_id") @db.Uuid
+  description String
+  quantity    Float
+  unit        String
+  unitPrice   Decimal @map("unit_price") @db.Decimal(15, 2)
+  totalPrice  Decimal @map("total_price") @db.Decimal(15, 2)
+  hsnCode     String? @map("hsn_code")
+  taxRate     Decimal @default(0) @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount   Decimal @default(0) @map("tax_amount") @db.Decimal(15, 2)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String
+  entity     String
+  entityId   String?  @map("entity_id") @db.Uuid
+  details    Json?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+model Sequence {
+  id          String @id @default(uuid()) @db.Uuid
+  name        String @unique
+  prefix      String
+  currentValue Int   @default(0) @map("current_value")
+  padLength   Int    @default(6) @map("pad_length")
+
+  @@map("sequences")
+}

@@ -1,0 +1,57 @@
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  MANAGER = 'MANAGER',
+  PROCUREMENT_OFFICER = 'PROCUREMENT_OFFICER',
+  VIEWER = 'VIEWER',
+}
+
+export enum VendorStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  BLACKLISTED = 'BLACKLISTED',
+}
+
+export enum RFQStatus {
+  DRAFT = 'DRAFT',
+  PUBLISHED = 'PUBLISHED',
+  CLOSED = 'CLOSED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum RFQVendorStatus {
+  PENDING = 'PENDING',
+  RESPONDED = 'RESPONDED',
+  DECLINED = 'DECLINED',
+  NO_RESPONSE = 'NO_RESPONSE',
+}
+
+export enum QuotationStatus {
+  SUBMITTED = 'SUBMITTED',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  ACCEPTED = 'ACCEPTED',
+  REJECTED = 'REJECTED',
+}
+
+export enum ApprovalAction {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export enum POStatus {
+  DRAFT = 'DRAFT',
+  ISSUED = 'ISSUED',
+  ACKNOWLEDGED = 'ACKNOWLEDGED',
+  PARTIALLY_DELIVERED = 'PARTIALLY_DELIVERED',
+  DELIVERED = 'DELIVERED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum InvoiceStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+  APPROVED = 'APPROVED',
+  PAID = 'PAID',
+  DISPUTED = 'DISPUTED',
+  CANCELLED = 'CANCELLED',
+}
